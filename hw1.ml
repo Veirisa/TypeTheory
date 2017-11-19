@@ -64,8 +64,60 @@ let rec merge_parse (x, y) = match (x, y) with
 let merge_sort x = merge_parse (split (x) [] []);; 
                      
 let rec string_of_lambda x = match x with
-	Var s -> s
-	| Abs (s, l) -> "\\" ^ s ^ "." ^ (string_of_lambda l)
-	| App (l1, l2) -> (string_of_lambda l1) ^ " " ^ (string_of_lambda l2);;
+	Var s -> s;
+	| Abs (s, l) -> "(\\" ^ s ^ "." ^ (string_of_lambda l) ^ ")"
+	| App (l1, l2) -> "(" ^ (string_of_lambda l1) ^ " " ^ (string_of_lambda l2) ^ ")";;
 
-let lambda_of_string x = failwith "Not implemented";;
+let lambda_of_string s = 
+	let s = s ^ ";" in
+	let pos = ref 0 in
+	let get() = s.[!pos] in
+	let next() = if !pos < String.length s - 1 then pos:= !pos + 1 else failwith "range exception" in
+	let eat x = if get() <> x then failwith "wrong food" else next() in 
+
+	let rec parse_var_name name = match (get()) with
+		'.' | ')' | ' ' | ';' -> name
+	    | _ -> (let sym = get() in 
+				next();
+				parse_var_name (name ^ String.make 1 sym)) 	 
+		in		  							 	   	 	
+
+	let parse_var() = Var(parse_var_name "") in
+
+	let rec parse_lambda() = 
+		let left = match (get()) with
+			'\\' -> parse_abs() 
+			| '(' -> (eat '(';
+					  let res = parse_lambda() in
+					  eat ')';
+					  res)
+			| _ -> parse_var()
+		in parse_app left	
+
+	and parse_abs() = 
+		eat '\\';
+		let name = parse_var_name "" in
+		eat '.';
+		Abs(name, parse_lambda())
+
+	and parse_app left = match (get()) with 
+		';' | ')' -> left
+		| _ -> (eat ' ';	
+				match (get()) with
+				'\\' -> (let right = parse_abs() in parse_app (App(left, right)))
+				| '(' -> (eat '(';
+						  let right = parse_lambda() in
+						  eat ')';
+						  parse_app (App(left, right)))
+				| _ -> (let right = parse_var() in parse_app (App(left, right))))
+		in parse_lambda();;						 				 						 					  	  	  
+
+
+				   
+	
+
+										
+
+
+
+

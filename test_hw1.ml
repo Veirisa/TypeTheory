@@ -96,6 +96,33 @@ print_string(string_of_lambda (App((Abs ("b",(Var "a"))), (Var "c"))));;
 
 print_string("\n\n");;
 
-(*
-print_string (Hw1.string_of_lambda (Hw1.lambda_of_string "\\x.\\y.x"));;
-*)
+(*lambda_of_string*)
+print_string("lambda_of_string:\n");;
+print_string("\\x.\\y.x = ");;
+print_string (string_of_lambda (lambda_of_string "\\x.\\y.x"));;
+
+print_string("\n\\x.y z = ");;
+print_string (string_of_lambda (lambda_of_string "\\x.y z"));;
+
+print_string("\n\\a.(b) = ");;
+print_string (string_of_lambda (lambda_of_string "\\a.(b)"));;
+
+print_string("\n\\xeerf83eb.ejhdejd1822 111ndnen2 = ");;
+print_string (string_of_lambda (lambda_of_string "\\xeerf83eb.ejhdejd1822 111ndnen2"));;
+
+print_string("\na (b c) d e = ");;
+print_string (string_of_lambda (lambda_of_string "a (b c) d e"));;
+
+print_string("\n\\x.(a b \\y.z p) = ");;
+print_string (string_of_lambda (lambda_of_string "\\x.(aaa bbb \\y.z p)"));;
+
+print_string("\n\\x.\\y.x x x \\y.z = ");;
+print_string (string_of_lambda (lambda_of_string "\\x.\\y.x x x \\y.z"));;
+
+print_string("\n(((x y)) \\a.b) = ");;
+print_string (string_of_lambda (lambda_of_string "(((x y)) \\a.b)"));;
+
+print_string("\n(\\a.\\b.\\c.t \\d.\\f.\\e.x) = ");;
+print_string (string_of_lambda (lambda_of_string "(\\a.\\b.\\c.t \\d.\\f.\\e.x)"));;
+
+print_string("\n\n");;
