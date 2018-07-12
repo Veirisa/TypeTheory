@@ -74,6 +74,9 @@ isAlphaEquivalent = checkAlphaEq 0 M.empty M.empty
 
 --------------------------------------------------------------------------------
 
+newName :: Int -> String -> String
+newName num s = takeWhile isLetter s ++ show num
+
 substitution :: Int -> Lambda -> Lambda -> String -> Lambda
 substitution num sl l x =
   let
@@ -82,9 +85,6 @@ substitution num sl l x =
   in
     freeSubstitution sl newL x
   where
-    newName :: Int -> String -> String
-    newName num s = takeWhile isLetter s ++ show num
-
     renameFailFreeVars :: Int -> S.Set String -> M.Map String String -> Lambda -> Lambda
     renameFailFreeVars num fails m l@(Var s) =
         case M.lookup s m of
@@ -129,7 +129,6 @@ normalBetaReduction = fst . reduction 0
 
 --------------------------------------------------------------------------------
 
--- Сведение выражения к нормальной форме с использованием нормального порядка редукции
 reduceToNormalForm :: Lambda -> Lambda
 reduceToNormalForm = doReduction 0
   where
