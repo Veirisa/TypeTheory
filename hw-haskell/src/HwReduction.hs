@@ -1,7 +1,8 @@
 module HwReduction where
 
 import           Data.Char (isLetter)
-import qualified Data.Map  as M (Map, empty, findWithDefault, fromList, insert)
+import qualified Data.Map  as M (Map, empty, findWithDefault, fromList, insert,
+                                 lookup, member)
 import qualified Data.Set  as S (Set, delete, empty, fromList, insert, member,
                                  null, toList, union)
 import           Hw
@@ -76,21 +77,29 @@ isAlphaEquivalent = checkAlphaEq 0 M.empty M.empty
 substitution :: Int -> Lambda -> Lambda -> String -> Lambda
 substitution num sl l x =
   let
-    failFreeVars = failsFreeToSubst sl l x
-    newSl = renameFailFreeVars num failFreeVars sl
+    failVars = failsFreeToSubst sl l x
+    newL = renameFailFreeVars num failVars M.empty l
   in
-    freeSubstitution newSl l x
+    freeSubstitution sl newL x
   where
     newName :: Int -> String -> String
     newName num s = takeWhile isLetter s ++ show num
 
-    renameFailFreeVars :: Int -> S.Set String -> Lambda -> Lambda
-    renameFailFreeVars num fails sl@(Var s) =
-        if S.member s fails then Var (newName num s) else sl
-    renameFailFreeVars num fails sl@(Abs s' l') =
-        if S.member s' fails then sl else Abs s' (renameFailFreeVars num fails l')
-    renameFailFreeVars num fails sl@(App l1 l2) =
-        App (renameFailFreeVars num fails l1) (renameFailFreeVars num fails l2)
+    renameFailFreeVars :: Int -> S.Set String -> M.Map String String -> Lambda -> Lambda
+    renameFailFreeVars num fails m l@(Var s) =
+        case M.lookup s m of
+            Just newS -> Var newS
+            _         -> l
+    renameFailFreeVars num fails m l@(Abs s' l') =
+      let
+        newM =
+            if S.member s' fails && not (M.member s' m)
+            then M.insert s'(newName num s') m
+            else m
+      in
+        Abs (M.findWithDefault s' s' newM) (renameFailFreeVars num fails newM l')
+    renameFailFreeVars num fails m l@(App l1 l2) =
+        App (renameFailFreeVars num fails m l1) (renameFailFreeVars num fails m l2)
 
     freeSubstitution :: Lambda -> Lambda -> String -> Lambda
     freeSubstitution sl l@(Var s) x = if s == x then sl else l
