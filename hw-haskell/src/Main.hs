@@ -30,7 +30,3 @@ isAlphaEqFromStrings s1 s2 =
 
 normalBetaReductionStrings :: String -> String
 normalBetaReductionStrings = stringOfLambda . normalBetaReduction . lambdaOfString
-
-substitutionStrings :: String -> String -> String -> String
-substitutionStrings s1 s2 s =
-     stringOfLambda $ substitution (lambdaOfString s1) (lambdaOfString s2) s

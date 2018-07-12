@@ -1,8 +1,9 @@
 module HwReduction where
 
-import qualified Data.Map as M (Map, empty, findWithDefault, fromList, insert)
-import qualified Data.Set as S (Set, delete, empty, fromList, insert, member,
-                                null, toList, union)
+import           Data.Char (isLetter)
+import qualified Data.Map  as M (Map, empty, findWithDefault, fromList, insert)
+import qualified Data.Set  as S (Set, delete, empty, fromList, insert, member,
+                                 null, toList, union)
 import           Hw
 
 --------------------------------------------------------------------------------
@@ -72,31 +73,50 @@ isAlphaEquivalent = checkAlphaEq 0 M.empty M.empty
 
 --------------------------------------------------------------------------------
 
-substitution :: Lambda -> Lambda -> String -> Lambda
-substitution sl l@(Var s) x = if s == x then sl else l
-substitution sl l@(Abs s' l') x =
-    if s' == x then l else Abs s' (substitution sl l' x)
-substitution sl (App l1 l2) x =
-    App (substitution sl l1 x) (substitution sl l2 x)
+substitution :: Int -> Lambda -> Lambda -> String -> Lambda
+substitution num sl l x =
+  let
+    failFreeVars = failsFreeToSubst sl l x
+    newSl = renameFailFreeVars num failFreeVars sl
+  in
+    freeSubstitution newSl l x
+  where
+    newName :: Int -> String -> String
+    newName num s = takeWhile isLetter s ++ show num
 
-reduction :: Lambda -> (Lambda, Bool)
-reduction (App (Abs s1' l1') l2) = (substitution l2 l1' s1', True)
-reduction l@(App l1 l2) =
-  case reduction l1 of
+    renameFailFreeVars :: Int -> S.Set String -> Lambda -> Lambda
+    renameFailFreeVars num fails sl@(Var s) =
+        if S.member s fails then Var (newName num s) else sl
+    renameFailFreeVars num fails sl@(Abs s' l') =
+        if S.member s' fails then sl else Abs s' (renameFailFreeVars num fails l')
+    renameFailFreeVars num fails sl@(App l1 l2) =
+        App (renameFailFreeVars num fails l1) (renameFailFreeVars num fails l2)
+
+    freeSubstitution :: Lambda -> Lambda -> String -> Lambda
+    freeSubstitution sl l@(Var s) x = if s == x then sl else l
+    freeSubstitution sl l@(Abs s' l') x =
+        if s' == x then l else Abs s' (freeSubstitution sl l' x)
+    freeSubstitution sl (App l1 l2) x =
+        App (freeSubstitution sl l1 x) (freeSubstitution sl l2 x)
+
+reduction :: Int -> Lambda -> (Lambda, Bool)
+reduction num (App (Abs s1' l1') l2) = (substitution num l2 l1' s1', True)
+reduction num l@(App l1 l2) =
+  case reduction num l1 of
       (newL1, True) -> (App newL1 l2, True)
       _ ->
-          case reduction l2 of
+          case reduction num l2 of
               (newL2, True) -> (App l1 newL2, True)
               _             -> (l, False)
-reduction l@(Abs s' l') =
-  case reduction l' of
+reduction num l@(Abs s' l') =
+  case reduction num l' of
       (newL', True) -> (Abs s' newL', True)
       _             -> (l, False)
-reduction l@(Var s) = (l, False)
+reduction num l@(Var s) = (l, False)
 
 -- Выполнение одного шага бета-редукции с использованием нормального порядка
 normalBetaReduction :: Lambda -> Lambda
-normalBetaReduction = fst . reduction
+normalBetaReduction = fst . reduction 0
 
 --------------------------------------------------------------------------------
 
