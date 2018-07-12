@@ -1,41 +1,44 @@
 module HwReduction where
 
-import qualified Data.Map as M (Map, findWithDefault, fromList, insert)
-import qualified Data.Set as S (Set, delete, fromList, insert, member, toList,
-                                union)
+import qualified Data.Map as M (Map, empty, findWithDefault, fromList, insert)
+import qualified Data.Set as S (Set, delete, empty, fromList, insert, member,
+                                null, toList, union)
 import           Hw
 
 --------------------------------------------------------------------------------
 
+failsFreeToSubst :: Lambda -> Lambda -> String -> S.Set String
+failsFreeToSubst sl l x  = snd $ getFailsFreeToSubst (S.fromList (freeVars sl)) l x
+  where
+    getFailsFreeToSubst :: S.Set String -> Lambda -> String -> (Bool, S.Set String)
+    getFailsFreeToSubst set (Var s) x = (s == x, S.empty)
+    getFailsFreeToSubst set (Abs s l) x =
+      let
+        (was, fails) = getFailsFreeToSubst set l x
+        haveNewFail = was && S.member s set
+      in
+        (was, if haveNewFail then S.insert s fails else fails)
+    getFailsFreeToSubst set (App l1 l2) x =
+      let
+        (was1, fails1) = getFailsFreeToSubst set l1 x
+        (was2, fails2) = getFailsFreeToSubst set l2 x
+      in
+        (was1 || was2, S.union fails1 fails2)
+
 -- Проверка свободы для подстановки: что -> где -> вместо чего -> ?
 freeToSubst :: Lambda -> Lambda -> String -> Bool
-freeToSubst sl l x = snd $ checkFreeToSubst (S.fromList (freeVars sl)) l x
-  where
-    checkFreeToSubst :: S.Set String -> Lambda -> String -> (Bool, Bool)
-    checkFreeToSubst set (Var s) x = (s == x, True)
-    checkFreeToSubst set (Abs s l) x =
-      let
-        (was, ans) = checkFreeToSubst set l x
-        newAns = ans && not (was && S.member s set)
-      in
-        (was, newAns)
-    checkFreeToSubst set (App l1 l2) x =
-      let
-        (was1, ans1) = checkFreeToSubst set l1 x
-        (was2, ans2) = checkFreeToSubst set l2 x
-      in
-        (was1 || was2, ans1 && ans2)
+freeToSubst sl l = S.null . failsFreeToSubst sl l
 
 --------------------------------------------------------------------------------
 
+freeVarsSet :: Lambda -> S.Set String
+freeVarsSet (Var s)     = S.fromList [s]
+freeVarsSet (Abs s l)   = S.delete s (freeVarsSet l)
+freeVarsSet (App l1 l2) = S.union (freeVarsSet l1) (freeVarsSet l2)
+
 -- Список имен свободных переменных
 freeVars :: Lambda -> [String]
-freeVars = S.toList . freeVarsSet (S.fromList [])
-  where
-    freeVarsSet :: S.Set String -> Lambda -> S.Set String
-    freeVarsSet set (Var s) = S.insert s set
-    freeVarsSet set (Abs s l) = S.delete s (freeVarsSet set l)
-    freeVarsSet set (App l1 l2) = S.union (freeVarsSet set l1) (freeVarsSet set l2)
+freeVars = S.toList . freeVarsSet
 
 --------------------------------------------------------------------------------
 
@@ -50,7 +53,7 @@ isNormalForm _                 = True
 
 -- Проверка, являются ли лямбда-выражения альфа-эквивалентными
 isAlphaEquivalent :: Lambda -> Lambda -> Bool
-isAlphaEquivalent = checkAlphaEq 0 (M.fromList []) (M.fromList [])
+isAlphaEquivalent = checkAlphaEq 0 M.empty M.empty
   where
     checkAlphaEq :: Int -> M.Map String String -> M.Map String String -> Lambda -> Lambda -> Bool
     checkAlphaEq num m1 m2 (Var s1) (Var s2) =

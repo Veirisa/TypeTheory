@@ -1,5 +1,6 @@
 module Main where
 
+import qualified Data.Set    as S (Set)
 import           Hw
 import           HwReduction
 
@@ -16,9 +17,9 @@ doubleConvert = stringOfLambda . lambdaOfString
 freeVarsFromString :: String -> [String]
 freeVarsFromString = freeVars . lambdaOfString
 
-freeToSubstFromStrings :: String -> String -> String -> Bool
-freeToSubstFromStrings slS lS =
-    freeToSubst (lambdaOfString slS) (lambdaOfString lS)
+failsFreeToSubstFromStrings :: String -> String -> String -> S.Set String
+failsFreeToSubstFromStrings slS lS =
+    failsFreeToSubst (lambdaOfString slS) (lambdaOfString lS)
 
 isNormalFormFromString :: String -> Bool
 isNormalFormFromString = isNormalForm . lambdaOfString
