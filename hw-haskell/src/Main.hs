@@ -14,19 +14,22 @@ doubleConvert = stringOfLambda . lambdaOfString
 
 -------------------------------- HW1: Reduction --------------------------------
 
-freeVarsFromString :: String -> [String]
-freeVarsFromString = freeVars . lambdaOfString
+freeVarsString :: String -> [String]
+freeVarsString = freeVars . lambdaOfString
 
-failsFreeToSubstFromStrings :: String -> String -> String -> S.Set String
-failsFreeToSubstFromStrings slS lS =
-    failsFreeToSubst (lambdaOfString slS) (lambdaOfString lS)
+freeToSubstString :: String -> String -> String -> Bool
+freeToSubstString slS lS =
+    freeToSubst (lambdaOfString slS) (lambdaOfString lS)
 
-isNormalFormFromString :: String -> Bool
-isNormalFormFromString = isNormalForm . lambdaOfString
+isNormalFormString :: String -> Bool
+isNormalFormString = isNormalForm . lambdaOfString
 
-isAlphaEqFromStrings :: String -> String -> Bool
-isAlphaEqFromStrings s1 s2 =
+isAlphaEquivalentString :: String -> String -> Bool
+isAlphaEquivalentString s1 s2 =
     isAlphaEquivalent (lambdaOfString s1) (lambdaOfString s2)
 
-normalBetaReductionStrings :: String -> String
-normalBetaReductionStrings = stringOfLambda . normalBetaReduction . lambdaOfString
+normalBetaReductionString :: String -> String
+normalBetaReductionString = stringOfLambda . normalBetaReduction . lambdaOfString
+
+reduceToNormalFormString :: String -> String
+reduceToNormalFormString = stringOfLambda . reduceToNormalForm . lambdaOfString

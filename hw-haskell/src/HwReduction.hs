@@ -122,4 +122,10 @@ normalBetaReduction = fst . reduction 0
 
 -- Сведение выражения к нормальной форме с использованием нормального порядка редукции
 reduceToNormalForm :: Lambda -> Lambda
-reduceToNormalForm = undefined
+reduceToNormalForm = doReduction 0
+  where
+    doReduction :: Int -> Lambda -> Lambda
+    doReduction num l =
+        case reduction num l of
+            (newL, True) -> doReduction (num + 1) newL
+            _            -> l
