@@ -3,7 +3,8 @@ module Unify where
 import           AlgebraicTerm
 
 import           Data.List     (maximum)
-import qualified Data.Map      as M (Map, fromList, lookup)
+import qualified Data.Map      as M (Map, empty, fromList, insert, lookup,
+                                     toList)
 
 --------------------------------------------------------------------------------
 
@@ -19,11 +20,11 @@ systemToEquation l =
     uniqueName l' = replicate (maximum (map getPairMaxLength l') + 1) 'f'
 
     getPairMaxLength :: (AlgebraicTerm, AlgebraicTerm) -> Int
-    getPairMaxLength (x, y) = max (getMaxLength x) (getMaxLength y)
+    getPairMaxLength (left, right) = max (getMaxLength left) (getMaxLength right)
 
     getMaxLength :: AlgebraicTerm -> Int
     getMaxLength (Fun n l') = max (length n) (maximum $ map getMaxLength l')
-    getMaxLength (Var n)    = length n
+    getMaxLength (Var x)    = length x
 
 --------------------------------------------------------------------------------
 
@@ -33,8 +34,8 @@ applySubstitution l = substitution (M.fromList l)
   where
     substitution :: M.Map String AlgebraicTerm -> AlgebraicTerm -> AlgebraicTerm
     substitution m (Fun n l) = Fun n (map (substitution m) l)
-    substitution m at@(Var n) =
-        case M.lookup n m of
+    substitution m at@(Var x) =
+        case M.lookup x m of
             Just newAt -> newAt
             Nothing    -> at
 
@@ -47,3 +48,22 @@ checkSolution lSub lEq =
     (left, right) = systemToEquation lEq
   in
     applySubstitution lSub left == applySubstitution lSub right
+
+--------------------------------------------------------------------------------
+
+-- Решение системы (Nothing - если его не существует)
+solveSystem :: [(AlgebraicTerm, AlgebraicTerm)] -> Maybe [(String, AlgebraicTerm)]
+solveSystem lEq =
+  let
+    (left, right) = systemToEquation lEq
+  in
+    fmap M.toList (solve (Just M.empty) left right)
+  where
+    solve :: Maybe (M.Map String AlgebraicTerm) -> AlgebraicTerm -> AlgebraicTerm
+             -> Maybe (M.Map String AlgebraicTerm)
+    solve mm (Var x) at@(Fun _ _) = fmap (M.insert x at) mm
+    solve mm at@(Fun _ _) (Var x) = fmap (M.insert x at) mm
+    solve mm (Fun n1 l1) (Fun n2 l2) =
+        if n1 == n2
+        then undefined
+        else Nothing

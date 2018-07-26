@@ -60,3 +60,5 @@ checkSolutionString lsSub ls1 ls2 =
     lEq = zip (map algTermOfString ls1) (map algTermOfString ls2)
   in
     checkSolution lSub lEq
+
+solveSystemString = undefined
