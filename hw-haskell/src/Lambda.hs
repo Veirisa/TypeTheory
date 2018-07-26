@@ -4,8 +4,6 @@ import           Common
 
 import           Text.Megaparsec
 
---------------------------------------------------------------------------------
-
 data Lambda = Var String
             | Abs String Lambda
             | App Lambda Lambda

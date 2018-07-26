@@ -4,8 +4,6 @@ import           Common
 
 import           Text.Megaparsec
 
---------------------------------------------------------------------------------
-
 data AlgebraicTerm = Var String
                    | Fun String [AlgebraicTerm]
     deriving (Eq, Show)

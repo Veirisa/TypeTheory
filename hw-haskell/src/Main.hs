@@ -1,6 +1,6 @@
 module Main where
 
-import           AlgebraicTerm hiding (AlgebraicTerm)
+import           AlgebraicTerm
 import           Lambda        hiding (Lambda)
 import           Reduction
 import           Unify         hiding (AlgebraicTerm)
@@ -41,9 +41,22 @@ reduceToNormalFormString = stringOfLambda . reduceToNormalForm . lambdaOfString
 doubleConvertAlgTerm :: String -> String
 doubleConvertAlgTerm = stringOfAlgTerm . algTermOfString
 
-systemToSolutionString :: [String] -> [String] -> (String, String)
-systemToSolutionString s1 s2 =
+
+systemToEquationString :: [String] -> [String] -> (String, String)
+systemToEquationString ls1 ls2 =
   let
-    solution = systemToSolution $ zip (map algTermOfString s1) (map algTermOfString s2)
+    result = systemToEquation $ zip (map algTermOfString ls1) (map algTermOfString ls2)
   in
-    (stringOfAlgTerm $ fst solution, stringOfAlgTerm $ snd solution)
+    (stringOfAlgTerm $ fst result, stringOfAlgTerm $ snd result)
+
+applySubstitutionString :: [(String, String)] -> String -> String
+applySubstitutionString sSub s =
+    stringOfAlgTerm $ applySubstitution (map (fmap algTermOfString) sSub) (algTermOfString s)
+
+checkSolutionString :: [(String, String)] -> [String] -> [String] -> Bool
+checkSolutionString lsSub ls1 ls2 =
+  let
+    lSub = map (fmap algTermOfString) lsSub
+    lEq = zip (map algTermOfString ls1) (map algTermOfString ls2)
+  in
+    checkSolution lSub lEq
