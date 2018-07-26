@@ -1,18 +1,20 @@
 module Main where
 
-import qualified Data.Set    as S (Set)
-import           Hw
-import           HwReduction
+import           AlgebraicTerm hiding (AlgebraicTerm)
+import           Lambda        hiding (Lambda)
+import           Reduction
+import           Unify         hiding (AlgebraicTerm)
+
+import qualified Data.Set      as S (Set)
 
 main :: IO ()
 main = putStrLn "TypeTheory"
 
---------------------------------- HW1 (Parser) ---------------------------------
+--------------------------------- HW: Reduction --------------------------------
 
-doubleConvert :: String -> String
-doubleConvert = stringOfLambda . lambdaOfString
+doubleConvertLambda :: String -> String
+doubleConvertLambda = stringOfLambda . lambdaOfString
 
--------------------------------- HW1: Reduction --------------------------------
 
 freeVarsString :: String -> [String]
 freeVarsString = freeVars . lambdaOfString
@@ -33,3 +35,15 @@ normalBetaReductionString = stringOfLambda . normalBetaReduction . lambdaOfStrin
 
 reduceToNormalFormString :: String -> String
 reduceToNormalFormString = stringOfLambda . reduceToNormalForm . lambdaOfString
+
+----------------------------------- HW: Unify ----------------------------------
+
+doubleConvertAlgTerm :: String -> String
+doubleConvertAlgTerm = stringOfAlgTerm . algTermOfString
+
+systemToSolutionString :: [String] -> [String] -> (String, String)
+systemToSolutionString s1 s2 =
+  let
+    solution = systemToSolution $ zip (map algTermOfString s1) (map algTermOfString s2)
+  in
+    (stringOfAlgTerm $ fst solution, stringOfAlgTerm $ snd solution)

@@ -1,11 +1,12 @@
-module HwReduction where
+module Reduction where
+
+import           Lambda
 
 import           Data.Char (isLetter)
 import qualified Data.Map  as M (Map, empty, findWithDefault, fromList, insert,
                                  lookup, member)
 import qualified Data.Set  as S (Set, delete, empty, fromList, insert, member,
                                  null, toList, union)
-import           Hw
 
 --------------------------------------------------------------------------------
 
