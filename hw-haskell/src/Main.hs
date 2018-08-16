@@ -84,7 +84,7 @@ a = b -> y              : f b y
 a = y -> g              : f y g
 
 [("a", "(f b y)"), ("a", "(f y g)")]
-ans = Just [("y","g"),("a","(f b g)"),("b","g")]
+ans = Just [("y","g"),("b","g"),("a","(f g g)")]
 -}
 
 --------------------------------- HW: Inference --------------------------------
@@ -98,8 +98,3 @@ inferSimpTypeString sl =
         _ -> Nothing
 
 -- "(\\f.(\\x.(f (f x))))"
--- createSystem :: M.Map String SimpType -> Int -> Lambda
---                -> ([(SimpType, SimpType)], SimpType, M.Map String SimpType)
-
--- createSystemString :: String ->
--- createSystemString sl =
