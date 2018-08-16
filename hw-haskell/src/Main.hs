@@ -1,9 +1,11 @@
 module Main where
 
 import           AlgebraicTerm
-import           Lambda        hiding (Lambda)
+import           Inference
+import           Lambda
 import           Reduction
-import           Unify         hiding (AlgebraicTerm)
+import           SimpType
+import           Unify
 
 import qualified Data.Set      as S (Set)
 
@@ -64,13 +66,40 @@ checkSolutionString lsSub ls1 ls2 =
 solveSystemString :: [(String, String)] -> Maybe [(String, String)]
 solveSystemString lEq =
     case solveSystem $ map (\(s1, s2) -> (algTermOfString s1, algTermOfString s2)) lEq of
-        Nothing   -> Nothing
         Just lRes -> Just $ map (fmap stringOfAlgTerm) lRes
+        _         -> Nothing
 
--- x = b -> a -> b         : f b (f a b)
--- x = (y -> y) -> z       : f (f y y) z
+{-
+x = b -> a -> b         : f b (f a b)
+x = (y -> y) -> z       : f (f y yg) z
 
--- [("(f b (f a b))", "(f (f y y) z)")]
--- ans = Just [("b","(f y y)"),("z","(f a (f y y))")]
--- [("x", "(f (f y y) z)"), ("x", "(f b (f a b))")]
--- ans = Just [("b","(f y y)"),("z","(f a (f y y))"),("x","(f (f y y) (f a (f y y)))")]
+[("(f b (f a b))", "(f (f y y) z)")]
+ans = Just [("b","(f y y)"),("z","(f a (f y y))")]
+[("x", "(f (f y y) z)"), ("x", "(f b (f a b))")]
+ans = Just [("b","(f y y)"),("z","(f a (f y y))"),("x","(f (f y y) (f a (f y y)))")]
+-}
+
+{-
+a = b -> y              : f b y
+a = y -> g              : f y g
+
+[("a", "(f b y)"), ("a", "(f y g)")]
+ans = Just [("y","g"),("a","(f b g)"),("b","g")]
+-}
+
+--------------------------------- HW: Inference --------------------------------
+
+-- inferSimpType :: Lambda -> Maybe ([(String, SimpType)], SimpType)
+
+inferSimpTypeString :: String -> Maybe ([(String, String)], String)
+inferSimpTypeString sl =
+    case inferSimpType $ lambdaOfString sl of
+        Just (lRes, st) -> Just (map (fmap stringOfSimpType) lRes, stringOfSimpType st)
+        _ -> Nothing
+
+-- "(\\f.(\\x.(f (f x))))"
+-- createSystem :: M.Map String SimpType -> Int -> Lambda
+--                -> ([(SimpType, SimpType)], SimpType, M.Map String SimpType)
+
+-- createSystemString :: String ->
+-- createSystemString sl =

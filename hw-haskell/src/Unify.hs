@@ -38,7 +38,7 @@ applySubstitution l = substitution (M.fromList l)
     substitution m at@(Var x) =
         case M.lookup x m of
             Just newAt -> newAt
-            Nothing    -> at
+            _          -> at
 
 --------------------------------------------------------------------------------
 
