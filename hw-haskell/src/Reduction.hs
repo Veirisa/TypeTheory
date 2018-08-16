@@ -6,7 +6,7 @@ import           Data.Char (isLetter)
 import qualified Data.Map  as M (Map, empty, findWithDefault, fromList, insert,
                                  lookup, member)
 import qualified Data.Set  as S (Set, delete, empty, fromList, insert, member,
-                                 null, toList, union)
+                                 null, singleton, toList, union)
 
 --------------------------------------------------------------------------------
 
@@ -75,32 +75,50 @@ isAlphaEquivalent = checkAlphaEq 0 M.empty M.empty
 
 --------------------------------------------------------------------------------
 
-newName :: Int -> String -> String
-newName num s = takeWhile isLetter s ++ show num
+getAllNames :: Lambda -> S.Set String
+getAllNames (Var s)     = S.singleton s
+getAllNames (Abs s l)   = S.union (S.singleton s) (getAllNames l)
+getAllNames (App l1 l2) = S.union (getAllNames l1) (getAllNames l2)
 
-substitution :: Int -> Lambda -> Lambda -> String -> Lambda
-substitution num sl l x =
+newName :: S.Set String -> Int -> String -> String
+newName set num s =
+  let
+    name = takeWhile isLetter s ++ show num
+  in
+    if S.member name set
+    then newName set (num + 1) s
+    else name
+
+substitution :: S.Set String -> Lambda -> Lambda -> String -> (Lambda, S.Set String)
+substitution block sl l x =
   let
     failVars = failsFreeToSubst sl l x
-    newL = renameFailFreeVars num failVars M.empty l
+    (newL, newBlock) = renameFailAbs block failVars M.empty l
   in
-    freeSubstitution sl newL x
+    (freeSubstitution sl newL x, newBlock)
   where
-    renameFailFreeVars :: Int -> S.Set String -> M.Map String String -> Lambda -> Lambda
-    renameFailFreeVars num fails m l@(Var s) =
+    renameFailAbs :: S.Set String -> S.Set String -> M.Map String String -> Lambda
+                     -> (Lambda, S.Set String)
+    renameFailAbs block fails m l@(Var s) =
         case M.lookup s m of
-            Just newS -> Var newS
-            _         -> l
-    renameFailFreeVars num fails m l@(Abs s' l') =
+            Just newS -> (Var newS, block)
+            _         -> (l, block)
+    renameFailAbs block fails m l@(Abs s' l') =
       let
-        newM =
+        name = newName block 0 s'
+        (newBlock1, newM) =
             if S.member s' fails && not (M.member s' m)
-            then M.insert s'(newName num s') m
-            else m
+            then (S.insert name block, M.insert s' name m)
+            else (block, m)
+        (newL, newBlock2) = renameFailAbs newBlock1 fails newM l'
       in
-        Abs (M.findWithDefault s' s' newM) (renameFailFreeVars num fails newM l')
-    renameFailFreeVars num fails m l@(App l1 l2) =
-        App (renameFailFreeVars num fails m l1) (renameFailFreeVars num fails m l2)
+        (Abs (M.findWithDefault s' s' newM) newL, newBlock2)
+    renameFailAbs block fails m l@(App l1 l2) =
+      let
+        (newL1, newBlock1) = renameFailAbs block fails m l1
+        (newL2, newBlock2) = renameFailAbs newBlock1 fails m l2
+      in
+        (App newL1 newL2, newBlock2)
 
     freeSubstitution :: Lambda -> Lambda -> String -> Lambda
     freeSubstitution sl l@(Var s) x = if s == x then sl else l
@@ -109,32 +127,33 @@ substitution num sl l x =
     freeSubstitution sl (App l1 l2) x =
         App (freeSubstitution sl l1 x) (freeSubstitution sl l2 x)
 
-reduction :: Int -> Lambda -> (Lambda, Bool)
-reduction num (App (Abs s1' l1') l2) = (substitution num l2 l1' s1', True)
-reduction num l@(App l1 l2) =
-  case reduction num l1 of
-      (newL1, True) -> (App newL1 l2, True)
-      _ ->
-          case reduction num l2 of
-              (newL2, True) -> (App l1 newL2, True)
-              _             -> (l, False)
-reduction num l@(Abs s' l') =
-  case reduction num l' of
-      (newL', True) -> (Abs s' newL', True)
-      _             -> (l, False)
-reduction num l@(Var s) = (l, False)
+reduction :: S.Set String -> Lambda -> (Lambda, Bool)
+reduction block (App (Abs s1' l1') l2) =
+  let
+    (newL, _) = substitution block l2 l1' s1'
+  in
+    (newL, True)
+reduction block l@(App l1 l2) =
+    case reduction block l1 of
+        (newL1, True) -> (App newL1 l2, True)
+        _       ->
+            case reduction block l2 of
+                (newL2, True) -> (App l1 newL2, True)
+                _             -> (l, False)
+reduction block l@(Abs s' l') =
+    case reduction block l' of
+        (newL', True) -> (Abs s' newL', True)
+        _             -> (l, False)
+reduction block l@(Var s) = (l, False)
 
 -- Выполнение одного шага бета-редукции с использованием нормального порядка
 normalBetaReduction :: Lambda -> Lambda
-normalBetaReduction = fst . reduction 0
+normalBetaReduction l = fst $ reduction (getAllNames l) l
 
 --------------------------------------------------------------------------------
 
 reduceToNormalForm :: Lambda -> Lambda
-reduceToNormalForm = doReduction 0
-  where
-    doReduction :: Int -> Lambda -> Lambda
-    doReduction num l =
-        case reduction num l of
-            (newL, True) -> doReduction (num + 1) newL
-            _            -> l
+reduceToNormalForm l =
+    case reduction (getAllNames l) l of
+        (newL, True) -> reduceToNormalForm newL
+        _            -> l
