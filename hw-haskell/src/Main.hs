@@ -61,4 +61,16 @@ checkSolutionString lsSub ls1 ls2 =
   in
     checkSolution lSub lEq
 
-solveSystemString = undefined
+solveSystemString :: [(String, String)] -> Maybe [(String, String)]
+solveSystemString lEq =
+    case solveSystem $ map (\(s1, s2) -> (algTermOfString s1, algTermOfString s2)) lEq of
+        Nothing   -> Nothing
+        Just lRes -> Just $ map (fmap stringOfAlgTerm) lRes
+
+-- x = b -> a -> b         : f b (f a b)
+-- x = (y -> y) -> z       : f (f y y) z
+
+-- [("(f b (f a b))", "(f (f y y) z)")]
+-- ans = Just [("b","(f y y)"),("z","(f a (f y y))")]
+-- [("x", "(f (f y y) z)"), ("x", "(f b (f a b))")]
+-- ans = Just [("b","(f y y)"),("z","(f a (f y y))"),("x","(f (f y y) (f a (f y y)))")]
