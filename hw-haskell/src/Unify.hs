@@ -2,7 +2,7 @@ module Unify where
 
 import           AlgebraicTerm
 
-import           Data.List     (maximum, null, partition)
+import           Data.List     (maximum, null, partition, span)
 import qualified Data.Map      as M (Map, empty, fromList, insert, lookup,
                                      toList)
 import           Data.Maybe    (isNothing)
@@ -95,8 +95,11 @@ solveSystem lEq =
       let
         (have, notHave) =
             partition (\((at1, at2), _) -> containsVar x at1 || containsVar x at2) lEqs
+        (haveFalse, haveTrue) = span (\(_, b) -> not b) have
+        (notHaveFalse, notHaveTrue) = span (\(_, b) -> not b) notHave
       in
         if containsVar x at
         then Nothing
-        else solveGlobal $ map (substitution [(x, at)]) have ++ notHave ++ [(eq, True)]
+        else solveGlobal $ map (substitution [(x, at)]) haveFalse ++ notHaveFalse ++
+                           map (substitution [(x, at)]) haveTrue ++ notHaveTrue ++ [(eq, True)]
     solve _ = Just []
