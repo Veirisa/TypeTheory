@@ -89,12 +89,15 @@ ans = Just [("y","g"),("b","g"),("a","(f g g)")]
 
 --------------------------------- HW: Inference --------------------------------
 
--- inferSimpType :: Lambda -> Maybe ([(String, SimpType)], SimpType)
-
 inferSimpTypeString :: String -> Maybe ([(String, String)], String)
 inferSimpTypeString sl =
     case inferSimpType $ lambdaOfString sl of
         Just (lRes, st) -> Just (map (fmap stringOfSimpType) lRes, stringOfSimpType st)
         _ -> Nothing
 
--- "(\\f.(\\x.(f (f x))))"
+{- "(\\f.(\\x.(f (f x))))"
+
+ans = Just
+      ([("t8","t18"), ("t3","t18"), ("t7","(t18 -> t18)")],
+        "((t18 -> t18) -> (t18 -> t18))")
+-}

@@ -32,7 +32,7 @@ inferSimpType lam =
     createSystem m num (App l1 l2) =
       let
         (syst1, st1, m1) = createSystem m (2 * num + 1) l1
-        (syst2, st2, m2) = createSystem m (2 * num + 2) l2
+        (syst2, st2, m2) = createSystem m1 (2 * num + 2) l2
         newSt = genType num
         newEq = (st1, SArrow st2 newSt)
       in
