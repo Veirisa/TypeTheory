@@ -215,14 +215,16 @@ fullReduction block mL isLeft l@(Var s) =
                 -- кладем: Лямбда + False, ибо не факт, что мы в норм форме
                 (newL@(Abs _ _), True, newBlock, newML) -> (newL, True, newBlock, M.insert s (newL, False) newML)
                 -- внизу что-то поменялось и мы не Abs - продолжаем редуцировать
-                (newL, True, newBlock, newML) -> fullReduction newBlock newML True newL
+                (newL, True, newBlock, newML) -> fullReduction newBlock (M.insert s (newL, False) newML) True l
+                -- (!!!) fullReduction newBlock newML True newL
 
         -- можем спокойно редуцировать до норм формы
         -- кладем: Лямбда + True
         (Just (realL, False), False) ->
             case fullReduction block mL False realL of
                 (newL, False, newBlock, newML) -> (newL, True, newBlock, M.insert s (newL, True) newML)
-                (newL, True, newBlock, newML) -> fullReduction newBlock newML False newL
+                (newL, True, newBlock, newML) -> fullReduction newBlock (M.insert s (newL, False) newML) False l
+                -- (!!!) fullReduction newBlock newML False newL
 
 
         -- наша прошлая копия уже доредуцировала - просто return
