@@ -1,3 +1,5 @@
+module Pain where
+
 data HashLambda = HVar String
                 | HAbs String Int
                 | HApp Int Int
