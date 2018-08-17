@@ -163,16 +163,16 @@ easyReduceToNormalForm l =
 
 getFailAbsNames :: Lambda -> S.Set String
 getFailAbsNames l = S.intersection (getVarNames l) (getAbsNames l)
-  where
-    getVarNames :: Lambda -> S.Set String
-    getVarNames (Var s)     = S.singleton s
-    getVarNames (Abs s l)   = getVarNames l
-    getVarNames (App l1 l2) = S.union (getVarNames l1) (getVarNames l2)
 
-    getAbsNames :: Lambda -> S.Set String
-    getAbsNames (Var s)     = S.empty
-    getAbsNames (Abs s l)   = S.union (S.singleton s) (getAbsNames l)
-    getAbsNames (App l1 l2) = S.union (getAbsNames l1) (getAbsNames l2)
+getVarNames :: Lambda -> S.Set String
+getVarNames (Var s)     = S.singleton s
+getVarNames (Abs s l)   = getVarNames l
+getVarNames (App l1 l2) = S.union (getVarNames l1) (getVarNames l2)
+
+getAbsNames :: Lambda -> S.Set String
+getAbsNames (Var s)     = S.empty
+getAbsNames (Abs s l)   = S.union (S.singleton s) (getAbsNames l)
+getAbsNames (App l1 l2) = S.union (getAbsNames l1) (getAbsNames l2)
 
 type MapStoLB = M.Map String (Lambda, Bool)
 
@@ -203,29 +203,46 @@ smartReduction block mL isLeft l@(Var s) =
     case (M.lookup s mL, isLeft) of
         -- мы - левый ребенок аппликации и при этом абстракция - просто return
         -- кладем: ничего, ибо ничего в лямбде не поменяли
-        (Just (realL@(Abs _ _), False), True) -> (realL, True, block, mL)
+        (Just (realL@(Abs _ _), False), True) ->
+          let
+            (unRealL, unBlock) = renameFailAbs block (getAbsNames realL) M.empty realL
+          in
+            (unRealL, True, unBlock, mL)
 
         -- мы - левый ребенок аппликации, редуцируем пока не станем Abs или норм формой
         (Just (realL, False), True) ->
             case doSmartReductionToAbs block mL True realL of
                 -- мы доредуцировали до норм формы - return
                 -- кдадем: Лямбда + True
-                (newL, False, newBlock, newML) -> (newL, True, newBlock, M.insert s (newL, True) newML)
+                (newL, False, newBlock, newML) ->
+                  let
+                    (unNewL, unNewBlock) = renameFailAbs newBlock (getAbsNames newL) M.empty newL
+                  in
+                    (unNewL, True, unNewBlock, M.insert s (newL, True) newML)
                 -- мы доредуцировали до Abs - return
                 -- кладем: Лямбда + False, ибо не факт, что мы в норм форме
-                (newL, _, newBlock, newML) -> (newL, True, newBlock, M.insert s (newL, False) newML)
+                (newL, _, newBlock, newML) ->
+                  let
+                    (unNewL, unNewBlock) = renameFailAbs newBlock (getAbsNames newL) M.empty newL
+                  in
+                    (unNewL, True, unNewBlock, M.insert s (newL, False) newML)
 
         -- можем спокойно редуцировать до норм формы
         -- кладем: Лямбда + True
         (Just (realL, False), False) ->
           let
             (newL, _, newBlock, newML) = doSmartReductionToNorm block mL False realL
+            (unNewL, unNewBlock) = renameFailAbs newBlock (getAbsNames newL) M.empty newL
           in
-            (newL, True, newBlock, M.insert s (newL, True) newML)
+            (unNewL, True, unNewBlock, M.insert s (newL, True) newML)
 
         -- наша прошлая копия уже доредуцировала - просто return
         -- кладем: ничего, ибо и так лежит лямбда в норм форме
-        (Just (realL, True), _) -> (realL, True, block, mL)
+        (Just (realL, True), _) ->
+          let
+            (unRealL, unBlock) = renameFailAbs block (getAbsNames realL) M.empty realL
+          in
+            (unRealL, True, unBlock, mL)
 
         -- эта переменная не является лениво спрятанной лямбдой - просто return
         _ -> (l, False, block, mL)
@@ -248,8 +265,7 @@ doSmartReductionToNorm block mL isLeft l' =
 reduceToNormalForm :: Lambda -> Lambda
 reduceToNormalForm l =
   let
-    failAbsNames = getFailAbsNames l
-    (uniqueL, allNames) = renameFailAbs (getAllNames l) failAbsNames M.empty l
+    (uniqueL, allNames) = renameFailAbs (getAllNames l) (getFailAbsNames l) M.empty l
     (normL, _, _,  _) = doSmartReductionToNorm allNames M.empty False uniqueL
   in
     normL
