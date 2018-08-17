@@ -189,15 +189,15 @@ fullReduction block mL isLeft (App (Abs s1' l1') l2) =
 fullReduction block mL isLeft l@(App l1 l2) =
     case fullReduction block mL True l1 of
         (newL1, True, newBlock1, newML1) -> fullReduction newBlock1 newML1 True (App newL1 l2)
-        (_, _, newBlock1, newML1)        ->
+        (newL1, _, newBlock1, newML1)    ->
             case fullReduction newBlock1 newML1 False l2 of
-                (newL2, True, newBlock2, newML2) -> fullReduction newBlock2 newML2 False (App l1 newL2)
-                (_, _, newBlock2, newML2)        -> (l, False, newBlock2, newML2)
+                (newL2, True, newBlock2, newML2) -> fullReduction newBlock2 newML2 False (App newL1 newL2)
+                (newL2, _, newBlock2, newML2)    -> (App newL1 newL2, False, newBlock2, newML2)
 
 fullReduction block mL isLeft l@(Abs s' l') =
     case fullReduction block mL False l' of
         (newL', True, newBlock, newML) -> fullReduction newBlock newML False (Abs s' newL')
-        (_, _, newBlock, newML)        -> (l, False, newBlock, newML)
+        (newL', _, newBlock, newML)    -> (Abs s' newL', False, newBlock, newML)
 
 fullReduction block mL isLeft l@(Var s) =
     case (M.lookup s mL, isLeft) of
@@ -240,14 +240,14 @@ help sl =
   in
     stringOfLambda uniqueL
 
-reduceToNormalFormSpec :: Lambda -> MapStoLB
+reduceToNormalFormSpec :: Lambda -> (String, MapStoLB)
 reduceToNormalFormSpec l =
   let
     failAbsNames = getFailAbsNames l
     (uniqueL, allNames) = renameFailAbs (getAllNames l) failAbsNames M.empty l
     (normL, _, _,  mL) = doFullReduction allNames M.empty False uniqueL
   in
-    mL
+    (stringOfLambda normL, mL)
   where
     doFullReduction :: S.Set String -> MapStoLB -> Bool -> Lambda
                        -> (Lambda, Bool, S.Set String, MapStoLB)
@@ -269,8 +269,10 @@ reduceToNormalForm l =
                        -> (Lambda, Bool, S.Set String, MapStoLB)
     doFullReduction block mL isLeft l' =
         case fullReduction block mL isLeft l' of
-            (newL, True, newBlock, newML) -> fullReduction newBlock newML False newL
+            (newL, True, newBlock, newML)  -> fullReduction newBlock newML False newL
             res@(newL, False, newBlock, newML) -> res
 
 
 -- (\\x.x) y
+-- "((\\y.((\\x.(x y)) (\\x.(x y)))) x)"
+-- (\\x.(\\y.(y x)) (\\z.(z x))) p
