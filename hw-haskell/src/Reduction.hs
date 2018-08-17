@@ -176,30 +176,30 @@ getFailAbsNames l = S.intersection (getVarNames l) (getAbsNames l)
 
 type MapStoLB = M.Map String (Lambda, Bool)
 
-fullReduction :: S.Set String -> MapStoLB -> Bool -> Lambda
+smartReduction :: S.Set String -> MapStoLB -> Bool -> Lambda
                   -> (Lambda, Bool, S.Set String, MapStoLB)
 
-fullReduction block mL isLeft (App (Abs s1' l1') l2) =
+smartReduction block mL isLeft (App (Abs s1' l1') l2) =
   let
     failVars = failsFreeToSubst l2 l1' s1'
     (newL, newBlock) = renameFailAbs block failVars M.empty l1'
   in
     (newL, True, newBlock, M.insert s1' (l2, False) mL)
 
-fullReduction block mL isLeft l@(App l1 l2) =
-    case fullReduction block mL True l1 of
-        (newL1, True, newBlock1, newML1) -> (fullReduction newBlock1 newML1 True (App newL1 l2))
-        (newL1, _, newBlock1, newML1)    ->
-            case fullReduction newBlock1 newML1 False l2 of
-                (newL2, True, newBlock2, newML2) -> fullReduction newBlock2 newML2 False (App newL1 newL2)
-                (newL2, _, newBlock2, newML2)    -> (App newL1 newL2, False, newBlock2, newML2)
+smartReduction block mL isLeft l@(App l1 l2) =
+    case smartReduction block mL True l1 of
+        (newL1, True, newBlock, newML) -> (App newL1 l2, True, newBlock, newML)
+        _                              ->
+            case smartReduction block mL False l2 of
+                (newL2, True, newBlock, newML) -> (App l1 newL2, True, newBlock, newML)
+                _                              -> (l, False, block, mL)
 
-fullReduction block mL isLeft l@(Abs s' l') =
-    case fullReduction block mL False l' of
-        (newL', True, newBlock, newML) -> fullReduction newBlock newML False (Abs s' newL')
-        (newL', _, newBlock, newML)    -> (Abs s' newL', False, newBlock, newML)
+smartReduction block mL isLeft l@(Abs s' l') =
+    case smartReduction block mL False l' of
+        (newL', True, newBlock, newML) -> (Abs s' newL', True, newBlock, newML)
+        _                              -> (l, False, block, mL)
 
-fullReduction block mL isLeft l@(Var s) =
+smartReduction block mL isLeft l@(Var s) =
     case (M.lookup s mL, isLeft) of
         -- мы - левый ребенок аппликации и при этом абстракция - просто return
         -- кладем: ничего, ибо ничего в лямбде не поменяли
@@ -207,25 +207,21 @@ fullReduction block mL isLeft l@(Var s) =
 
         -- мы - левый ребенок аппликации, редуцируем пока не станем Abs или норм формой
         (Just (realL, False), True) ->
-            case fullReduction block mL True realL of
-                -- внизу ничего больше не изменяется (мы в норм форме) - return
+            case doSmartReductionToAbs block mL True realL of
+                -- мы доредуцировали до норм формы - return
                 -- кдадем: Лямбда + True
                 (newL, False, newBlock, newML) -> (newL, True, newBlock, M.insert s (newL, True) newML)
-                -- мы стали Abs - return
+                -- мы доредуцировали до Abs - return
                 -- кладем: Лямбда + False, ибо не факт, что мы в норм форме
-                (newL@(Abs _ _), True, newBlock, newML) -> (newL, True, newBlock, M.insert s (newL, False) newML)
-                -- внизу что-то поменялось и мы не Abs - продолжаем редуцировать
-                (newL, True, newBlock, newML) -> fullReduction newBlock (M.insert s (newL, False) newML) True l
-                -- (!!!) fullReduction newBlock newML True newL
+                (newL, _, newBlock, newML) -> (newL, True, newBlock, M.insert s (newL, False) newML)
 
         -- можем спокойно редуцировать до норм формы
         -- кладем: Лямбда + True
         (Just (realL, False), False) ->
-            case fullReduction block mL False realL of
-                (newL, False, newBlock, newML) -> (newL, True, newBlock, M.insert s (newL, True) newML)
-                (newL, True, newBlock, newML) -> fullReduction newBlock (M.insert s (newL, False) newML) False l
-                -- (!!!) fullReduction newBlock newML False newL
-
+          let
+            (newL, _, newBlock, newML) = doSmartReductionToNorm block mL False realL
+          in
+            (newL, True, newBlock, M.insert s (newL, True) newML)
 
         -- наша прошлая копия уже доредуцировала - просто return
         -- кладем: ничего, ибо и так лежит лямбда в норм форме
@@ -234,29 +230,29 @@ fullReduction block mL isLeft l@(Var s) =
         -- эта переменная не является лениво спрятанной лямбдой - просто return
         _ -> (l, False, block, mL)
 
-help sl =
-  let
-    l = lambdaOfString sl
-    failAbsNames = getFailAbsNames l
-    (uniqueL, allNames) = renameFailAbs (getAllNames l) failAbsNames M.empty l
-  in
-    stringOfLambda uniqueL
+doSmartReductionToAbs :: S.Set String -> MapStoLB -> Bool -> Lambda
+                   -> (Lambda, Bool, S.Set String, MapStoLB)
+doSmartReductionToAbs block mL isLeft l' =
+    case smartReduction block mL isLeft l' of
+        res@(Abs _ _, _, _, _)      -> res
+        res@(_, False, _, _)        -> res
+        (newL, _, newBlock, newML)  -> doSmartReductionToAbs newBlock newML isLeft newL
+
+doSmartReductionToNorm :: S.Set String -> MapStoLB -> Bool -> Lambda
+                   -> (Lambda, Bool, S.Set String, MapStoLB)
+doSmartReductionToNorm block mL isLeft l' =
+    case smartReduction block mL isLeft l' of
+        res@(_, False, _, _)        -> res
+        (newL, _, newBlock, newML)  -> doSmartReductionToNorm newBlock newML isLeft newL
 
 reduceToNormalForm :: Lambda -> Lambda
 reduceToNormalForm l =
   let
     failAbsNames = getFailAbsNames l
     (uniqueL, allNames) = renameFailAbs (getAllNames l) failAbsNames M.empty l
-    (normL, _, _,  _) = doFullReduction allNames M.empty False uniqueL
+    (normL, _, _,  _) = doSmartReductionToNorm allNames M.empty False uniqueL
   in
     normL
-  where
-    doFullReduction :: S.Set String -> MapStoLB -> Bool -> Lambda
-                       -> (Lambda, Bool, S.Set String, MapStoLB)
-    doFullReduction block mL isLeft l' =
-        case fullReduction block mL isLeft l' of
-            (newL, True, newBlock, newML)  -> doFullReduction newBlock newML False newL
-            res@(newL, False, newBlock, newML) -> res
 
 {-
 root: ((\x2.(x2 x)) (\x3.(x3 x)))
