@@ -5,8 +5,9 @@ import           Lambda
 import           Data.Char (isLetter)
 import qualified Data.Map  as M (Map, empty, findWithDefault, fromList, insert,
                                  lookup, member)
-import qualified Data.Set  as S (Set, delete, empty, fromList, insert, member,
-                                 null, singleton, toList, union)
+import qualified Data.Set  as S (Set, delete, empty, fromList, insert,
+                                 intersection, member, null, singleton, toList,
+                                 union)
 
 --------------------------------------------------------------------------------
 
@@ -81,13 +82,36 @@ getAllNames (Abs s l)   = S.union (S.singleton s) (getAllNames l)
 getAllNames (App l1 l2) = S.union (getAllNames l1) (getAllNames l2)
 
 newName :: S.Set String -> Int -> String -> String
-newName set num s =
+newName block num s =
   let
     name = takeWhile isLetter s ++ show num
   in
-    if S.member name set
-    then newName set (num + 1) s
+    if S.member name block
+    then newName block (num + 1) s
     else name
+
+renameFailAbs :: S.Set String -> S.Set String -> M.Map String String -> Lambda
+                 -> (Lambda, S.Set String)
+renameFailAbs block fails m l@(Var s) =
+    case M.lookup s m of
+        Just newS -> (Var newS, block)
+        _         -> (l, block)
+renameFailAbs block fails m l@(Abs s' l') =
+  let
+    name = newName block 0 s'
+    (newBlock1, newM) =
+        if S.member s' fails
+        then (S.insert name block, M.insert s' name m)
+        else (block, m)
+    (newL, newBlock2) = renameFailAbs newBlock1 fails newM l'
+  in
+    (Abs (M.findWithDefault s' s' newM) newL, newBlock2)
+renameFailAbs block fails m l@(App l1 l2) =
+  let
+    (newL1, newBlock1) = renameFailAbs block fails m l1
+    (newL2, newBlock2) = renameFailAbs newBlock1 fails m l2
+  in
+    (App newL1 newL2, newBlock2)
 
 substitution :: S.Set String -> Lambda -> Lambda -> String -> (Lambda, S.Set String)
 substitution block sl l x =
@@ -97,29 +121,6 @@ substitution block sl l x =
   in
     (freeSubstitution sl newL x, newBlock)
   where
-    renameFailAbs :: S.Set String -> S.Set String -> M.Map String String -> Lambda
-                     -> (Lambda, S.Set String)
-    renameFailAbs block fails m l@(Var s) =
-        case M.lookup s m of
-            Just newS -> (Var newS, block)
-            _         -> (l, block)
-    renameFailAbs block fails m l@(Abs s' l') =
-      let
-        name = newName block 0 s'
-        (newBlock1, newM) =
-            if S.member s' fails && not (M.member s' m)
-            then (S.insert name block, M.insert s' name m)
-            else (block, m)
-        (newL, newBlock2) = renameFailAbs newBlock1 fails newM l'
-      in
-        (Abs (M.findWithDefault s' s' newM) newL, newBlock2)
-    renameFailAbs block fails m l@(App l1 l2) =
-      let
-        (newL1, newBlock1) = renameFailAbs block fails m l1
-        (newL2, newBlock2) = renameFailAbs newBlock1 fails m l2
-      in
-        (App newL1 newL2, newBlock2)
-
     freeSubstitution :: Lambda -> Lambda -> String -> Lambda
     freeSubstitution sl l@(Var s) x = if s == x then sl else l
     freeSubstitution sl l@(Abs s' l') x =
@@ -152,8 +153,124 @@ normalBetaReduction l = fst $ reduction (getAllNames l) l
 
 --------------------------------------------------------------------------------
 
+-- Неэффективное сведение выражения к нормальной форме с использованием
+-- нормального порядка
+easyReduceToNormalForm :: Lambda -> Lambda
+easyReduceToNormalForm l =
+    case reduction (getAllNames l) l of
+        (newL, True) -> easyReduceToNormalForm newL
+        _            -> l
+
+getFailAbsNames :: Lambda -> S.Set String
+getFailAbsNames l = S.intersection (getVarNames l) (getAbsNames l)
+  where
+    getVarNames :: Lambda -> S.Set String
+    getVarNames (Var s)     = S.singleton s
+    getVarNames (Abs s l)   = getVarNames l
+    getVarNames (App l1 l2) = S.union (getVarNames l1) (getVarNames l2)
+
+    getAbsNames :: Lambda -> S.Set String
+    getAbsNames (Var s)     = S.empty
+    getAbsNames (Abs s l)   = S.union (S.singleton s) (getAbsNames l)
+    getAbsNames (App l1 l2) = S.union (getAbsNames l1) (getAbsNames l2)
+
+type MapStoLB = M.Map String (Lambda, Bool)
+
+fullReduction :: S.Set String -> MapStoLB -> Bool -> Lambda
+                  -> (Lambda, Bool, S.Set String, MapStoLB)
+
+fullReduction block mL isLeft (App (Abs s1' l1') l2) =
+  let
+    failVars = failsFreeToSubst l2 l1' s1'
+    (newL, newBlock) = renameFailAbs block failVars M.empty l1'
+  in
+    (newL, True, newBlock, M.insert s1' (l2, False) mL)
+
+fullReduction block mL isLeft l@(App l1 l2) =
+    case fullReduction block mL True l1 of
+        (newL1, True, newBlock1, newML1) -> fullReduction newBlock1 newML1 True (App newL1 l2)
+        (_, _, newBlock1, newML1)        ->
+            case fullReduction newBlock1 newML1 False l2 of
+                (newL2, True, newBlock2, newML2) -> fullReduction newBlock2 newML2 False (App l1 newL2)
+                (_, _, newBlock2, newML2)        -> (l, False, newBlock2, newML2)
+
+fullReduction block mL isLeft l@(Abs s' l') =
+    case fullReduction block mL False l' of
+        (newL', True, newBlock, newML) -> fullReduction newBlock newML False (Abs s' newL')
+        (_, _, newBlock, newML)        -> (l, False, newBlock, newML)
+
+fullReduction block mL isLeft l@(Var s) =
+    case (M.lookup s mL, isLeft) of
+        -- мы - левый ребенок аппликации и при этом абстракция - просто return
+        -- кладем: ничего, ибо ничего в лямбде не поменяли
+        (Just (realL@(Abs _ _), False), True) -> (realL, True, block, mL)
+
+        -- мы - левый ребенок аппликации, редуцируем пока не станем Abs или норм формой
+        (Just (realL, False), True) ->
+            case fullReduction block mL True realL of
+                -- внизу ничего больше не изменяется (мы в норм форме) - return
+                -- кдадем: Лямбда + True
+                (newL, False, newBlock, newML) -> (newL, True, newBlock, M.insert s (newL, True) newML)
+                -- мы стали Abs - return
+                -- кладем: Лямбда + False, ибо не факт, что мы в норм форме
+                (newL@(Abs _ _), True, newBlock, newML) -> (newL, True, newBlock, M.insert s (newL, False) newML)
+                -- внизу что-то поменялось и мы не Abs - продолжаем редуцировать
+                (newL, True, newBlock, newML) -> fullReduction newBlock newML True newL
+
+        -- можем спокойно редуцировать до норм формы
+        -- кладем: Лямбда + True
+        (Just (realL, False), False) ->
+            case fullReduction block mL False realL of
+                (newL, False, newBlock, newML) -> (newL, True, newBlock, M.insert s (newL, True) newML)
+                (newL, True, newBlock, newML) -> fullReduction newBlock newML False newL
+
+
+        -- наша прошлая копия уже доредуцировала - просто return
+        -- кладем: ничего, ибо и так лежит лямбда в норм форме
+        (Just (realL, True), _) -> (realL, True, block, mL)
+
+        -- эта переменная не является лениво спрятанной лямбдой - просто return
+        _ -> (l, False, block, mL)
+
+help sl =
+  let
+    l = lambdaOfString sl
+    failAbsNames = getFailAbsNames l
+    (uniqueL, allNames) = renameFailAbs (getAllNames l) failAbsNames M.empty l
+  in
+    stringOfLambda uniqueL
+
+reduceToNormalFormSpec :: Lambda -> MapStoLB
+reduceToNormalFormSpec l =
+  let
+    failAbsNames = getFailAbsNames l
+    (uniqueL, allNames) = renameFailAbs (getAllNames l) failAbsNames M.empty l
+    (normL, _, _,  mL) = doFullReduction allNames M.empty False uniqueL
+  in
+    mL
+  where
+    doFullReduction :: S.Set String -> MapStoLB -> Bool -> Lambda
+                       -> (Lambda, Bool, S.Set String, MapStoLB)
+    doFullReduction block mL isLeft l' =
+        case fullReduction block mL isLeft l' of
+            (newL, True, newBlock, newML) -> fullReduction newBlock newML False newL
+            res@(newL, False, newBlock, newML) -> res
+
 reduceToNormalForm :: Lambda -> Lambda
 reduceToNormalForm l =
-    case reduction (getAllNames l) l of
-        (newL, True) -> reduceToNormalForm newL
-        _            -> l
+  let
+    failAbsNames = getFailAbsNames l
+    (uniqueL, allNames) = renameFailAbs (getAllNames l) failAbsNames M.empty l
+    (normL, _, _,  _) = doFullReduction allNames M.empty False uniqueL
+  in
+    normL
+  where
+    doFullReduction :: S.Set String -> MapStoLB -> Bool -> Lambda
+                       -> (Lambda, Bool, S.Set String, MapStoLB)
+    doFullReduction block mL isLeft l' =
+        case fullReduction block mL isLeft l' of
+            (newL, True, newBlock, newML) -> fullReduction newBlock newML False newL
+            res@(newL, False, newBlock, newML) -> res
+
+
+-- (\\x.x) y
