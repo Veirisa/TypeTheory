@@ -35,6 +35,9 @@ isAlphaEquivalentString s1 s2 =
 normalBetaReductionString :: String -> String
 normalBetaReductionString = stringOfLambda . normalBetaReduction . lambdaOfString
 
+easyReduceToNormalFormString :: String -> String
+easyReduceToNormalFormString = stringOfLambda . easyReduceToNormalForm . lambdaOfString
+
 reduceToNormalFormString :: String -> String
 reduceToNormalFormString = stringOfLambda . reduceToNormalForm . lambdaOfString
 

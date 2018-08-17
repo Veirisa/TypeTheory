@@ -188,7 +188,7 @@ fullReduction block mL isLeft (App (Abs s1' l1') l2) =
 
 fullReduction block mL isLeft l@(App l1 l2) =
     case fullReduction block mL True l1 of
-        (newL1, True, newBlock1, newML1) -> fullReduction newBlock1 newML1 True (App newL1 l2)
+        (newL1, True, newBlock1, newML1) -> (fullReduction newBlock1 newML1 True (App newL1 l2))
         (newL1, _, newBlock1, newML1)    ->
             case fullReduction newBlock1 newML1 False l2 of
                 (newL2, True, newBlock2, newML2) -> fullReduction newBlock2 newML2 False (App newL1 newL2)
@@ -242,22 +242,6 @@ help sl =
   in
     stringOfLambda uniqueL
 
-reduceToNormalFormSpec :: Lambda -> (String, MapStoLB)
-reduceToNormalFormSpec l =
-  let
-    failAbsNames = getFailAbsNames l
-    (uniqueL, allNames) = renameFailAbs (getAllNames l) failAbsNames M.empty l
-    (normL, _, _,  mL) = doFullReduction allNames M.empty False uniqueL
-  in
-    (stringOfLambda normL, mL)
-  where
-    doFullReduction :: S.Set String -> MapStoLB -> Bool -> Lambda
-                       -> (Lambda, Bool, S.Set String, MapStoLB)
-    doFullReduction block mL isLeft l' =
-        case fullReduction block mL isLeft l' of
-            (newL, True, newBlock, newML) -> fullReduction newBlock newML False newL
-            res@(newL, False, newBlock, newML) -> res
-
 reduceToNormalForm :: Lambda -> Lambda
 reduceToNormalForm l =
   let
@@ -271,10 +255,22 @@ reduceToNormalForm l =
                        -> (Lambda, Bool, S.Set String, MapStoLB)
     doFullReduction block mL isLeft l' =
         case fullReduction block mL isLeft l' of
-            (newL, True, newBlock, newML)  -> fullReduction newBlock newML False newL
+            (newL, True, newBlock, newML)  -> doFullReduction newBlock newML False newL
             res@(newL, False, newBlock, newML) -> res
 
+{-
+root: ((\x2.(x2 x)) (\x3.(x3 x)))
+in Beta-Redex: ((\x2.(x2 x)) (\x3.(x3 x)))
+out Beta-Redex: (x2 x), True
+root: ((\x2.(x2 x)) (\x3.(x3 x)))
+in App: (x2 x)
+Var: x2
+in Beta-Redex: ((\x3.(x3 x)) x)
+out Beta-Redex: (x3 x), True
+(x3 x)
+-}
 
 -- (\\x.x) y
 -- "((\\y.((\\x.(x y)) (\\x.(x y)))) x)"
 -- (\\x.(\\y.(y x)) (\\z.(z x))) p
+-- "(\\x.x x x) (\\y.y)"
