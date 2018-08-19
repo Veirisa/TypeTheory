@@ -2,7 +2,8 @@ module Reduction where
 
 import           Lambda
 
-import           Data.Char (isLetter)
+import           Data.Char (isDigit)
+import           Data.List (dropWhileEnd)
 import qualified Data.Map  as M (Map, empty, findWithDefault, fromList, insert,
                                  lookup, member)
 import qualified Data.Set  as S (Set, delete, empty, fromList, insert,
@@ -64,7 +65,7 @@ isAlphaEquivalent = checkAlphaEq 0 M.empty M.empty
         M.findWithDefault s1 s1 m1 == M.findWithDefault s2 s2 m2
     checkAlphaEq num m1 m2 (Abs s1 l1) (Abs s2 l2) =
       let
-        newS = show num
+        newS = '.' : show num
         newNum = num + 1
         newM1 = M.insert s1 newS m1
         newM2 = M.insert s2 newS m2
@@ -77,6 +78,21 @@ isAlphaEquivalent = checkAlphaEq 0 M.empty M.empty
 --------------------------------------------------------------------------------
 
 -- /\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\ --
+
+convertToBlockMap :: M.Map String Int -> [String] -> M.Map String Int
+convertToBlockMap block [] = block
+convertToBlockMap block (x : xs) =
+  let
+    prName = dropWhileEnd isDigit x
+    sNum = drop (length prName) x
+    num = if null sNum then 0 else read sNum + 1
+    newBlock =
+        case M.lookup prName block of
+            Just oldNum -> M.insert prName (max oldNum num) block
+            _           -> M.insert prName num block
+  in
+    convertToBlockMap newBlock xs
+
 
 getAllNames :: Lambda -> S.Set String
 getAllNames (Var s)     = S.singleton s
@@ -96,27 +112,30 @@ getAbsNames (App l1 l2) = S.union (getAbsNames l1) (getAbsNames l2)
 getFailAbsNames :: Lambda -> S.Set String
 getFailAbsNames l = S.intersection (getVarNames l) (getAbsNames l)
 
-newName :: S.Set String -> Int -> String -> String
-newName block num s =
+newName :: M.Map String Int -> String -> (String, M.Map String Int)
+newName block s =
   let
-    name = takeWhile isLetter s ++ show num
+    prName = dropWhileEnd isDigit s
   in
-    if S.member name block
-    then newName block (num + 1) s
-    else name
+    case M.lookup prName block of
+        Just num -> (prName ++ show num, M.insert prName (num + 1) block)
+        _        -> (prName, M.insert prName 0 block)
 
-renameFailAbs :: S.Set String -> S.Set String -> M.Map String String -> Lambda
-                 -> (Lambda, S.Set String)
+renameFailAbs :: M.Map String Int -> S.Set String -> M.Map String String -> Lambda
+                 -> (Lambda, M.Map String Int)
 renameFailAbs block fails m l@(Var s) =
     case M.lookup s m of
         Just newS -> (Var newS, block)
         _         -> (l, block)
 renameFailAbs block fails m l@(Abs s' l') =
   let
-    name = newName block 0 s'
     (newBlock1, newM) =
         if S.member s' fails
-        then (S.insert name block, M.insert s' name m)
+        then
+          let
+            (newNname, newBlock) = newName block s'
+          in
+            (newBlock, M.insert s' newNname m)
         else (block, m)
     (newL, newBlock2) = renameFailAbs newBlock1 fails newM l'
   in
@@ -132,7 +151,7 @@ renameFailAbs block fails m l@(App l1 l2) =
 
 --------------------------------------------------------------------------------
 
-substitution :: S.Set String -> Lambda -> Lambda -> String -> (Lambda, S.Set String)
+substitution :: M.Map String Int -> Lambda -> Lambda -> String -> (Lambda, M.Map String Int)
 substitution block sl l x =
   let
     failVars = failsFreeToSubst sl l x
@@ -147,7 +166,7 @@ substitution block sl l x =
     freeSubstitution sl (App l1 l2) x =
         App (freeSubstitution sl l1 x) (freeSubstitution sl l2 x)
 
-reduction :: S.Set String -> Lambda -> (Lambda, Bool)
+reduction :: M.Map String Int -> Lambda -> (Lambda, Bool)
 reduction block (App (Abs s1' l1') l2) =
   let
     (newL, _) = substitution block l2 l1' s1'
@@ -168,7 +187,11 @@ reduction block l@(Var s) = (l, False)
 
 -- Выполнение одного шага бета-редукции с использованием нормального порядка
 normalBetaReduction :: Lambda -> Lambda
-normalBetaReduction l = fst $ reduction (getAllNames l) l
+normalBetaReduction l =
+  let
+    block = convertToBlockMap M.empty (S.toList (getAllNames l))
+  in
+    fst $ reduction block l
 
 --------------------------------------------------------------------------------
 
@@ -176,14 +199,14 @@ normalBetaReduction l = fst $ reduction (getAllNames l) l
 -- нормального порядка
 slowReduceToNormalForm :: Lambda -> Lambda
 slowReduceToNormalForm l =
-    case reduction (getAllNames l) l of
+    case reduction (convertToBlockMap M.empty (S.toList (getAllNames l))) l of
         (newL, True) -> slowReduceToNormalForm newL
         _            -> l
 
 type MapStoLB = M.Map String (Lambda, Bool)
 
-smartReduction :: S.Set String -> MapStoLB -> Bool -> Lambda
-                  -> (Lambda, Bool, S.Set String, MapStoLB)
+smartReduction :: M.Map String Int -> MapStoLB -> Bool -> Lambda
+                  -> (Lambda, Bool, M.Map String Int, MapStoLB)
 smartReduction block mL isLeft (App (Abs s1' l1') l2) =
   let
     failVars = failsFreeToSubst l2 l1' s1'
@@ -245,16 +268,16 @@ smartReduction block mL isLeft l@(Var s) =
         -- эта переменная не является лениво спрятанной лямбдой - просто return
         _ -> (l, False, block, mL)
 
-doSmartReductionToAbs :: S.Set String -> MapStoLB -> Bool -> Lambda
-                   -> (Lambda, Bool, S.Set String, MapStoLB)
+doSmartReductionToAbs :: M.Map String Int -> MapStoLB -> Bool -> Lambda
+                   -> (Lambda, Bool, M.Map String Int, MapStoLB)
 doSmartReductionToAbs block mL isLeft l' =
     case smartReduction block mL isLeft l' of
         res@(Abs _ _, _, _, _)      -> res
         res@(_, False, _, _)        -> res
         (newL, _, newBlock, newML)  -> doSmartReductionToAbs newBlock newML isLeft newL
 
-doSmartReductionToNorm :: S.Set String -> MapStoLB -> Bool -> Lambda
-                   -> (Lambda, Bool, S.Set String, MapStoLB)
+doSmartReductionToNorm :: M.Map String Int -> MapStoLB -> Bool -> Lambda
+                   -> (Lambda, Bool, M.Map String Int, MapStoLB)
 doSmartReductionToNorm block mL isLeft l' =
     case smartReduction block mL isLeft l' of
         res@(_, False, _, _)        -> res
@@ -265,7 +288,8 @@ doSmartReductionToNorm block mL isLeft l' =
 reduceToNormalForm :: Lambda -> Lambda
 reduceToNormalForm l =
   let
-    (uniqueL, allNames) = renameFailAbs (getAllNames l) (getFailAbsNames l) M.empty l
-    (normL, _, _,  _) = doSmartReductionToNorm allNames M.empty False uniqueL
+    block = convertToBlockMap M.empty (S.toList (getAllNames l))
+    (uniqueL, fullBlock) = renameFailAbs block (getFailAbsNames l) M.empty l
+    (normL, _, _,  _) = doSmartReductionToNorm fullBlock M.empty False uniqueL
   in
     normL
