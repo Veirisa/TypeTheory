@@ -37,7 +37,7 @@ freeToSubst sl l = S.null . failsFreeToSubst sl l
 --------------------------------------------------------------------------------
 
 freeVarsSet :: Lambda -> S.Set String
-freeVarsSet (Var s)     = S.fromList [s]
+freeVarsSet (Var s)     = S.singleton s
 freeVarsSet (Abs s l)   = S.delete s (freeVarsSet l)
 freeVarsSet (App l1 l2) = S.union (freeVarsSet l1) (freeVarsSet l2)
 

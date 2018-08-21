@@ -7,19 +7,19 @@ data SimpType = SElem String
       deriving (Eq, Show)
 
 stringOfSimpType :: SimpType -> String
-stringOfSimpType (SElem x) = x
-stringOfSimpType (SArrow l r) =
-    "(" ++ stringOfSimpType l ++ " -> " ++ stringOfSimpType r ++ ")"
+stringOfSimpType (SElem s) = s
+stringOfSimpType (SArrow tl tr) =
+    "(" ++ stringOfSimpType tl ++ " -> " ++ stringOfSimpType tr ++ ")"
 
 algTermOfSimpType :: SimpType -> AlgebraicTerm
-algTermOfSimpType (SElem x) = Var x
-algTermOfSimpType (SArrow l r) =
-    Fun "a" [algTermOfSimpType l, algTermOfSimpType r]
+algTermOfSimpType (SElem s) = Var s
+algTermOfSimpType (SArrow tl tr) =
+    Fun "a" [algTermOfSimpType tl, algTermOfSimpType tr]
 
 simpTypeOfAlgTerm :: AlgebraicTerm -> SimpType
-simpTypeOfAlgTerm (Var x) = SElem x
-simpTypeOfAlgTerm (Fun n (l : r : [])) =
+simpTypeOfAlgTerm (Var s) = SElem s
+simpTypeOfAlgTerm (Fun n (tl : tr : [])) =
     if n == "a"
-    then SArrow (simpTypeOfAlgTerm l) (simpTypeOfAlgTerm r)
+    then SArrow (simpTypeOfAlgTerm tl) (simpTypeOfAlgTerm tr)
     else error "incorrect algebraic term"
 simpTypeOfAlgTerm _ = error "incorrect algebraic term"
