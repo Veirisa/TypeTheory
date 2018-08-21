@@ -1,13 +1,13 @@
 module Main where
 
 import           AlgebraicTerm
+import           HMLambda
+import           HMType
 import           Inference
 import           Lambda
 import           Reduction
 import           SimpType
 import           Unify
-
-import qualified Data.Set      as S (Set)
 
 main :: IO ()
 main = putStrLn "TypeTheory"
@@ -92,6 +92,10 @@ ans = Just [("y","g"),("b","g"),("a","(f g g)")]
 
 --------------------------------- HW: Inference --------------------------------
 
+doubleConvertHMLambda :: String -> String
+doubleConvertHMLambda = stringOfHMLambda . hmLambdaOfString
+
+
 inferSimpTypeString :: String -> Maybe ([(String, String)], String)
 inferSimpTypeString sl =
     case inferSimpType $ lambdaOfString sl of
@@ -104,3 +108,9 @@ ans = Just
       ([("t8","t18"), ("t3","t18"), ("t7","(t18 -> t18)")],
         "((t18 -> t18) -> (t18 -> t18))")
 -}
+
+algorithmWString :: String -> Maybe ([(String, String)], String)
+algorithmWString sl =
+    case algorithmW $ hmLambdaOfString sl of
+        Just (lRes, st) -> Just (map (fmap stringOfHMType) lRes, stringOfHMType st)
+        _ -> Nothing

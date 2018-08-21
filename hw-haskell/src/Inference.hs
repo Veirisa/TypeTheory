@@ -1,5 +1,7 @@
 module Inference where
 
+import           HMLambda
+import           HMType
 import           Lambda
 import           SimpType
 import           Unify
@@ -44,3 +46,9 @@ inferSimpType lam =
         case M.lookup s m' of
             Just stv -> (syst, SArrow stv st, m')
             _ -> (syst, SArrow (genType num) st, M.insert s (genType num) m')
+
+--------------------------------------------------------------------------------
+
+-- Вывода типа в системе Хиндли-Милнера
+algorithmW :: HMLambda -> Maybe ([(String, HMType)], HMType)
+algorithmW = undefined
