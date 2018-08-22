@@ -109,6 +109,8 @@ ans = Just
         "((t18 -> t18) -> (t18 -> t18))")
 -}
 
+-- let tt2 =  HM_Let("w", HM_Abs("f", HM_Abs("x", HM_App(HM_Var("f"), HM_App(HM_Var("f"), HM_Var("x"))))), HM_App(HM_Var("w"), HM_App(HM_Var("w"), HM_App(HM_Var("w"), HM_App(HM_Var("w"), HM_App(HM_Var("w"), HM_App(HM_Var("w"), HM_App(HM_Var("w"), HM_App(HM_Var("w"), HM_App(HM_Var("w"), HM_App(HM_Var("w"), HM_App(HM_Var("w"), HM_App(HM_Var("w"), HM_Var("w"))))))))))))))
+
 algorithmWString :: String -> Maybe ([(String, String)], String)
 algorithmWString sl =
     case algorithmW $ hmLambdaOfString sl of

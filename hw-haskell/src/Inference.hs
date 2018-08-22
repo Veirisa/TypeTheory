@@ -33,12 +33,12 @@ inferSimpType lam =
                     -> ([(SimpType, SimpType)], SimpType, M.Map String SimpType)
     createSystem m num (Var s) =
         case M.lookup s m of
-            Just stv -> ([], stv, m)
+            Just stS -> ([], stS, m)
             _        ->
               let
-                newSt = genSimpType num
+                newStS = genSimpType num
               in
-                ([], newSt, M.insert s newSt m)
+                ([], newStS, M.insert s newStS m)
     createSystem m num (App l1 l2) =
       let
         (syst1, st1, m1) = createSystem m (2 * num + 1) l1
@@ -49,15 +49,15 @@ inferSimpType lam =
         (newEq : syst1 ++ syst2, newSt, M.union m1 m2)
     createSystem m num (Abs s l) =
       let
-        (syst, st, m') = createSystem m (2 * num + 1) l
+        maybeOldStS = M.lookup s m
+        newStS = genSimpType num
+        mWithS = M.insert s newStS m
+        (syst, st, m') = createSystem mWithS (2 * num + 1) l
+        newSt = SArrow newStS st
       in
-        case M.lookup s m' of
-            Just stv -> (syst, SArrow stv st, m')
-            _ ->
-              let
-                newSt = genSimpType num
-              in
-                (syst, SArrow newSt st, M.insert s newSt m')
+        case maybeOldStS of
+            Just oldStS -> (syst, newSt, M.insert s oldStS m')
+            _           -> (syst, newSt, m')
 
 --------------------------------------------------------------------------------
 
