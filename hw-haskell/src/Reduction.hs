@@ -4,8 +4,7 @@ import           Lambda
 
 import           Data.Char (isDigit)
 import           Data.List (dropWhileEnd)
-import qualified Data.Map  as M (Map, empty, findWithDefault, fromList, insert,
-                                 lookup, member)
+import qualified Data.Map  as M (Map, empty, findWithDefault, insert, lookup)
 import qualified Data.Set  as S (Set, delete, empty, fromList, insert,
                                  intersection, member, null, singleton, toList,
                                  union)
@@ -16,7 +15,7 @@ failsFreeToSubst :: Lambda -> Lambda -> String -> S.Set String
 failsFreeToSubst sl l x  = snd $ getFailsFreeToSubst (S.fromList (freeVars sl)) l x
   where
     getFailsFreeToSubst :: S.Set String -> Lambda -> String -> (Bool, S.Set String)
-    getFailsFreeToSubst set (Var s) x = (s == x, S.empty)
+    getFailsFreeToSubst _ (Var s) x = (s == x, S.empty)
     getFailsFreeToSubst set (Abs s l) x =
       let
         (was, fails) = getFailsFreeToSubst set l x
@@ -51,7 +50,7 @@ freeVars = S.toList . freeVarsSet
 isNormalForm :: Lambda -> Bool
 isNormalForm (App (Abs _ _) _) = False
 isNormalForm (App l1 l2)       = isNormalForm l1 && isNormalForm l2
-isNormalForm (Abs s l)         = isNormalForm l
+isNormalForm (Abs _ l)         = isNormalForm l
 isNormalForm _                 = True
 
 --------------------------------------------------------------------------------
@@ -61,7 +60,7 @@ isAlphaEquivalent :: Lambda -> Lambda -> Bool
 isAlphaEquivalent = checkAlphaEq 0 M.empty M.empty
   where
     checkAlphaEq :: Int -> M.Map String String -> M.Map String String -> Lambda -> Lambda -> Bool
-    checkAlphaEq num m1 m2 (Var s1) (Var s2) =
+    checkAlphaEq _ m1 m2 (Var s1) (Var s2) =
         M.findWithDefault s1 s1 m1 == M.findWithDefault s2 s2 m2
     checkAlphaEq num m1 m2 (Abs s1 l1) (Abs s2 l2) =
       let
@@ -99,7 +98,7 @@ getAllNames (Abs s l)   = S.union (S.singleton s) (getAllNames l)
 getAllNames (App l1 l2) = S.union (getAllNames l1) (getAllNames l2)
 
 getAbsNames :: Lambda -> S.Set String
-getAbsNames (Var s)     = S.empty
+getAbsNames (Var _)     = S.empty
 getAbsNames (Abs s l)   = S.union (S.singleton s) (getAbsNames l)
 getAbsNames (App l1 l2) = S.union (getAbsNames l1) (getAbsNames l2)
 
@@ -108,7 +107,7 @@ getFailAbsNames l = S.intersection (getVarNames l) (getAbsNames l)
   where
     getVarNames :: Lambda -> S.Set String
     getVarNames (Var s)     = S.singleton s
-    getVarNames (Abs s l)   = getVarNames l
+    getVarNames (Abs _ l)   = getVarNames l
     getVarNames (App l1 l2) = S.union (getVarNames l1) (getVarNames l2)
 
 newName :: M.Map String Int -> String -> (String, M.Map String Int)
@@ -122,11 +121,11 @@ newName block s =
 
 renameFailAbs :: M.Map String Int -> S.Set String -> M.Map String String -> Lambda
                  -> (Lambda, M.Map String Int)
-renameFailAbs block fails m l@(Var s) =
+renameFailAbs block _ m l@(Var s) =
     case M.lookup s m of
         Just newS -> (Var newS, block)
         _         -> (l, block)
-renameFailAbs block fails m l@(Abs s' l') =
+renameFailAbs block fails m (Abs s' l') =
   let
     (newBlock1, newM) =
         if S.member s' fails
@@ -139,7 +138,7 @@ renameFailAbs block fails m l@(Abs s' l') =
     (newL, newBlock2) = renameFailAbs newBlock1 fails newM l'
   in
     (Abs (M.findWithDefault s' s' newM) newL, newBlock2)
-renameFailAbs block fails m l@(App l1 l2) =
+renameFailAbs block fails m (App l1 l2) =
   let
     (newL1, newBlock1) = renameFailAbs block fails m l1
     (newL2, newBlock2) = renameFailAbs newBlock1 fails m l2
@@ -182,7 +181,7 @@ reduction block l@(Abs s' l') =
     case reduction block l' of
         (newL', True) -> (Abs s' newL', True)
         _             -> (l, False)
-reduction block l@(Var s) = (l, False)
+reduction _ l@(Var _) = (l, False)
 
 -- Выполнение одного шага бета-редукции с использованием нормального порядка
 normalBetaReduction :: Lambda -> Lambda
@@ -194,7 +193,7 @@ normalBetaReduction l =
 
 --------------------------------------------------------------------------------
 
--- *Неэффективное сведение выражения к нормальной форме с использованием
+-- Неэффективное сведение выражения к нормальной форме с использованием
 -- нормального порядка
 slowReduceToNormalForm :: Lambda -> Lambda
 slowReduceToNormalForm l =
@@ -208,50 +207,50 @@ type MapStoLB = M.Map String (Lambda, Bool)
 
 smartReduction :: M.Map String Int -> MapStoLB -> Bool -> Lambda
                   -> (Lambda, Bool, M.Map String Int, MapStoLB)
-smartReduction block mL isLeft (App (Abs s1' l1') l2) =
+smartReduction block mL _ (App (Abs s1' l1') l2) =
   let
     failVars = failsFreeToSubst l2 l1' s1'
     (newL, newBlock) = renameFailAbs block failVars M.empty l1'
   in
     (newL, True, newBlock, M.insert s1' (l2, False) mL)
-smartReduction block mL isLeft l@(App l1 l2) =
+smartReduction block mL _ l@(App l1 l2) =
     case smartReduction block mL True l1 of
         (newL1, True, newBlock, newML) -> (App newL1 l2, True, newBlock, newML)
         _                              ->
             case smartReduction block mL False l2 of
                 (newL2, True, newBlock, newML) -> (App l1 newL2, True, newBlock, newML)
                 _                              -> (l, False, block, mL)
-smartReduction block mL isLeft l@(Abs s' l') =
+smartReduction block mL _ l@(Abs s' l') =
     case smartReduction block mL False l' of
         (newL', True, newBlock, newML) -> (Abs s' newL', True, newBlock, newML)
         _                              -> (l, False, block, mL)
 smartReduction block mL isLeft l@(Var s) =
     case (M.lookup s mL, isLeft) of
-        -- мы - левый ребенок аппликации и при этом абстракция - просто return
+        -- мы - левый ребенок App и являемся Abs => return
         -- кладем: ничего, ибо ничего в лямбде не поменяли
         (Just (realL@(Abs _ _), False), True) ->
           let
             (unRealL, unBlock) = renameFailAbs block (getAbsNames realL) M.empty realL
           in
             (unRealL, True, unBlock, mL)
-        -- мы - левый ребенок аппликации, редуцируем пока не станем Abs или норм формой
+        -- мы - левый ребенок App и не являемся Abs => редуцируем до Abs (если повезет - до норм формы)
         (Just (realL, False), True) ->
             case doSmartReductionToAbs block mL True realL of
-                -- мы доредуцировали до норм формы - return
+                -- мы доредуцировали до норм формы => return
                 -- кдадем: Лямбда + True
                 (newL, False, newBlock, newML) ->
                   let
                     (unNewL, unNewBlock) = renameFailAbs newBlock (getAbsNames newL) M.empty newL
                   in
                     (unNewL, True, unNewBlock, M.insert s (newL, True) newML)
-                -- мы доредуцировали до Abs - return
+                -- мы доредуцировали до Abs => return
                 -- кладем: Лямбда + False, ибо не факт, что мы в норм форме
                 (newL, _, newBlock, newML) ->
                   let
                     (unNewL, unNewBlock) = renameFailAbs newBlock (getAbsNames newL) M.empty newL
                   in
                     (unNewL, True, unNewBlock, M.insert s (newL, False) newML)
-        -- можем спокойно редуцировать до норм формы
+        -- выше не может появиться бета-редекса => редуцируем до норм формы и return
         -- кладем: Лямбда + True
         (Just (realL, False), False) ->
           let
@@ -259,14 +258,14 @@ smartReduction block mL isLeft l@(Var s) =
             (unNewL, unNewBlock) = renameFailAbs newBlock (getAbsNames newL) M.empty newL
           in
             (unNewL, True, unNewBlock, M.insert s (newL, True) newML)
-        -- наша прошлая копия уже доредуцировала - просто return
+        -- наша прошлая копия уже доредуцирована => return
         -- кладем: ничего, ибо и так лежит лямбда в норм форме
         (Just (realL, True), _) ->
           let
             (unRealL, unBlock) = renameFailAbs block (getAbsNames realL) M.empty realL
           in
             (unRealL, True, unBlock, mL)
-        -- эта переменная не является лениво спрятанной лямбдой - просто return
+        -- эта переменная не является лениво спрятанной лямбдой => return
         _ -> (l, False, block, mL)
 
 doSmartReductionToAbs :: M.Map String Int -> MapStoLB -> Bool -> Lambda

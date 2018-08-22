@@ -25,7 +25,7 @@ identifier = try (name >>= isNotKeyword)
 
     isNotKeyword :: String -> Parser String
     isNotKeyword w =
-        if w `elem` keywordList
+        if elem w keywordList
         then fail $ "keyword " ++ show w ++ " can't be a name"
         else return w
 
@@ -33,7 +33,7 @@ identifier = try (name >>= isNotKeyword)
     keywordList = ["let", "in"]
 
     isNameSym :: Char -> Bool
-    isNameSym ch = not (elem ch blocked)
+    isNameSym ch = notElem ch blocked
 
     blocked :: [Char]
     blocked = ['\\', ' ', '.', '(', ')']

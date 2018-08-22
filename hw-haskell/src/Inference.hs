@@ -10,21 +10,20 @@ import           Data.List ((\\))
 import qualified Data.Map  as M (Map, delete, empty, findWithDefault, fromList,
                                  insert, lookup, map, member, singleton, toList,
                                  union)
-import qualified Data.Set  as S (Set, delete, difference, empty, member,
-                                 notMember, singleton, toList, union)
+import qualified Data.Set  as S (Set, delete, empty, singleton, toList, union)
 
 --------------------------------------------------------------------------------
 
 -- Вывод типа в просто типизированном лямбда-исчислении
 inferSimpType :: Lambda -> Maybe ([(String, SimpType)], SimpType)
-inferSimpType lam =
+inferSimpType l =
   let
-    (syst, st, _) = createSystem M.empty 0 lam
+    (syst, st, _) = createSystem M.empty 0 l
   in
     case solveSystem $ map (\(st1, st2) -> (algTermOfSimpType st1, algTermOfSimpType st2)) syst of
         Just solut ->
-            Just $ (map (fmap simpTypeOfAlgTerm) solut,
-                    simpTypeOfAlgTerm $ applySubstitution solut (algTermOfSimpType st))
+            Just (map (fmap simpTypeOfAlgTerm) solut,
+                  simpTypeOfAlgTerm $ applySubstitution solut (algTermOfSimpType st))
         _ -> Nothing
   where
     genSimpType :: Int -> SimpType
@@ -109,7 +108,7 @@ dependTypesSubstitution num t =
     (M.empty, applyTypeSubstitution newVarTypesMap t, newNum)
   where
     hmTypeDependVars :: HMType -> [String]
-    hmTypeDependVars (HMForAll s t) = s : (hmTypeDependVars t)
+    hmTypeDependVars (HMForAll s t) = s : hmTypeDependVars t
     hmTypeDependVars _              = []
 
     genVarTypeMap :: Int -> [String] -> (M.Map String HMType, Int)
@@ -156,8 +155,8 @@ typeUnify left right =
 algorithmW :: HMLambda -> Maybe ([(String, HMType)], HMType)
 algorithmW l =
     case doAlgorithmW 0 (hmLambdaFreeVarsMap l) l of
-        Nothing               -> Nothing
-        Just (substMap, t, _) -> Just $ (M.toList substMap, t)
+        Just (substMap, t, _) -> Just (M.toList substMap, t)
+        _                     -> Nothing
   where
     doAlgorithmW :: Int -> M.Map String HMType -> HMLambda
                     -> Maybe (M.Map String HMType, HMType, Int)

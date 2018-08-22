@@ -2,10 +2,8 @@ module Unify where
 
 import           AlgebraicTerm
 
-import           Data.List     (maximum, null, partition, span)
-import qualified Data.Map      as M (Map, empty, fromList, insert, lookup,
-                                     toList)
-import           Data.Maybe    (isNothing)
+import           Data.List     (maximum, partition, span)
+import qualified Data.Map      as M (Map, fromList, lookup)
 
 --------------------------------------------------------------------------------
 
@@ -65,7 +63,7 @@ solveSystem lEq =
 
     containsVar :: String -> AlgebraicTerm -> Bool
     containsVar x (Var y)   = x == y
-    containsVar x (Fun n l) = any (containsVar x) l
+    containsVar x (Fun _ l) = any (containsVar x) l
 
     substitution :: [(String, AlgebraicTerm)] -> ((AlgebraicTerm, AlgebraicTerm), Bool)
                     -> ((AlgebraicTerm, AlgebraicTerm), Bool)
@@ -90,7 +88,7 @@ solveSystem lEq =
       in
         if n1 /= n2 || len /= length l2
         then Nothing
-        else solveGlobal $ (zip (zip l1 l2) (replicate len False)) ++ lEqs
+        else solveGlobal $ zip (zip l1 l2) (replicate len False) ++ lEqs
     solve ((eq@(Var x, at), _) : lEqs) =
       let
         (have, notHave) =
