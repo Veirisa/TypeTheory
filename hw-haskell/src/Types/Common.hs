@@ -1,4 +1,4 @@
-module Common where
+module Types.Common where
 
 import           Control.Monad              (void)
 import           Data.Void

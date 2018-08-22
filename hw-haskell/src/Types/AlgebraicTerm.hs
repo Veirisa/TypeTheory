@@ -1,6 +1,6 @@
-module AlgebraicTerm where
+module Types.AlgebraicTerm where
 
-import           Common
+import           Types.Common
 
 import           Text.Megaparsec
 

@@ -1,6 +1,6 @@
-module HMType where
+module Types.HMType where
 
-import           AlgebraicTerm
+import           Types.AlgebraicTerm
 
 data HMType = HMElem String
             | HMArrow HMType HMType

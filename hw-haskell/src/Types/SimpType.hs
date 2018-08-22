@@ -1,6 +1,6 @@
-module SimpType where
+module Types.SimpType where
 
-import           AlgebraicTerm
+import           Types.AlgebraicTerm
 
 data SimpType = SElem String
               | SArrow SimpType SimpType

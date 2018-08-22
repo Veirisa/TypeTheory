@@ -1,6 +1,6 @@
-module Lambda where
+module Types.Lambda where
 
-import           Common
+import           Types.Common
 
 import           Text.Megaparsec
 

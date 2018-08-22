@@ -1,12 +1,13 @@
 module Main where
 
-import           AlgebraicTerm
-import           HMLambda
-import           HMType
+import           Types.AlgebraicTerm
+import           Types.HMLambda
+import           Types.HMType
+import           Types.Lambda
+import           Types.SimpType
+
 import           Inference
-import           Lambda
 import           Reduction
-import           SimpType
 import           Unify
 
 main :: IO ()
@@ -35,11 +36,77 @@ isAlphaEquivalentString s1 s2 =
 normalBetaReductionString :: String -> String
 normalBetaReductionString = stringOfLambda . normalBetaReduction . lambdaOfString
 
+{-
+
+"(\\x.x) a"                -> "a"
+"a ((\\y.\\z.y) (\\p.p))"  -> "(a (\\z.(\\p.p)))"
+"(\\x.x) (\\y.y) (\\z.z))" -> "((\\y.y) (\\z.z))"
+"\\z.((\\x.x) y)"          -> "(\\z.y)"
+"((\\x.\\y.x)(\\z.y)) k"   -> "((\\y0.(\\z.y)) k)"
+
+-}
+
 slowReduceToNormalFormString :: String -> String
 slowReduceToNormalFormString = stringOfLambda . slowReduceToNormalForm . lambdaOfString
 
 reduceToNormalFormString :: String -> String
 reduceToNormalFormString = stringOfLambda . reduceToNormalForm . lambdaOfString
+
+{-
+
+"(\\x.\\y.y) ((\\z.z z) (\\z.z z))"
+reduce to:
+"(\\y0.y0)"
+
+"a ((\\y.\\z.y) (\\p.p))"
+reduce to:
+"(a (\\z.(\\p1.p1)))"
+
+"(\\x.x) (\\y.y) (\\z.z))"
+reduce to:
+"(\\z1.z1)"
+
+"(\\x.x x) (\\a.\\b.b b b)"
+reduce to:
+"(\\b1.((b1 b1) b1))"
+
+"(\\x.x x x) ((\\x.x) (\\x.x))"
+reduce to:
+"(\\x8.x8)"
+
+"(\\x.\\y.x) (\\x.x) ((\\x.x x) (\\x.x x))"
+reduce to:
+"(\\x4.x4)"
+
+"(\\n.\\f.\\x.n (\\g.\\h.h (g f)) (\\u.x) (\\u.u)) (\\f.\\x.f (f (f x)))"
+reduce to:
+"(\\f0.(\\x0.(f0 (f0 x0))))"
+
+"((\\x.\\y.x)(\\z.y)) k"
+reduce to:
+"(\\z0.y)"
+
+"(\\x.\\y.x) k"
+reduce to:
+"(\\y.k)"
+
+"(\\y.\\m.y (\\f.\\n.(\\s.(s (\\x.\\a.\\b.b) (\\a.\\b.a)) (\\f.\\x.x) (f s)) (m n)) (\\f.\\x.f (f (f x)))) (\\f.(\\x.f (x x)) (\\x.f (x x))) ((\\n.\\f.\\x.n (\\g.\\h.h (g f)) (\\u.x) (\\u.u)))"
+reduce to:
+"(\\f33.(\\x44.x44))"
+
+"(\\n.\\f.\\x.n (\\g.\\h.h (g f)) (\\u.x) (\\u.u)) (\\f.\\x.f (f (f x)))"
+reduce to:
+"(\\f0.(\\x0.(f0 (f0 x0))))"
+
+"((\\l0.((\\l1.((\\l2.((\\l3.((\\l4.((\\l5.((\\l6.((\\l7.((\\l8.((\\l9.((\\l10.((\\l11.((\\l12.((\\l13.((l13 (\\l14.(\\l15.(l14 (l14 l15))))) (\\l14.(\\l15.(l14 (l14 (l14 l15))))))) (\\l13.(\\l14.(((l0 (\\l15.(\\l16.(\\l17.(((l1 (l10 l16)) (l12 l17)) (((l1 (l10 l17)) ((l15 (l11 l16)) (\\l18.(\\l19.(l18 l19))))) ((l15 (l11 l16)) ((l15 l16) (l11 l17))))))))) l13) l14))))) (\\l12.(\\l13.(\\l14.((l12 l13) (l13 l14))))))) (\\l11.(\\l12.(\\l13.(((l11 (\\l14.(\\l15.(l15 (l14 l12))))) (\\l14.l13)) (\\l14.l14))))))) (\\l10.((l10 (\\l11.l3)) l2)))) (l0 (\\l9.(\\l10.(\\l11.((\\l12.((\\l13.(((l1 l12) l13) (((l1 l13) l12) ((l9 (l4 l10)) (l4 l11))))) (l8 l11))) (l8 l10)))))))) (\\l8.((l8 (\\l9.l3)) l2)))) (\\l7.(\\l8.((l8 l4) l7))))) (\\l6.(\\l7.((l6 l5) l7))))) (\\l5.(\\l6.(\\l7.((l5 l6) (l6 l7))))))) (\\l4.(\\l5.(\\l6.(((l4 (\\l7.(\\l8.(l8 (l7 l5))))) (\\l7.l6)) (\\l7.l7))))))) (\\l3.(\\l4.l4)))) (\\l2.(\\l3.l2)))) (\\l1.(\\l2.(\\l3.((l1 l2) l3)))))) (\\l0.((\\l1.(l0 (l1 l1))) (\\l1.(l0 (l1 l1))))))"
+reduce to:
+"(\\l5027.(\\l5028.(l5027 (l5027 (l5027 (l5027 (l5027 (l5027 (l5027 (l5027 (l5027 l5028)))))))))))"
+
+"(\\s.\\k.\\i.(((s ((s (k s)) ((s ((s (k s)) ((s (k k)) i))) (k ((s (k (s ((s (k s)) ((s (k (s (k (s ((s ((s ((s i) (k (k (k i))))) (k ((s (k k)) i)))) (k ((s ((s (k s)) ((s (k k)) i))) (k i))))))))) ((s ((s (k s)) ((s (k k)) ((s (k s)) ((s (k (s (k ((s ((s (k s)) ((s (k k)) ((s (k s)) ((s (k k)) i))))) (k ((s ((s (k s)) ((s (k k)) i))) (k i)))))))) ((s ((s (k s)) ((s (k k)) i))) (k i))))))) (k ((s (k k)) i)))))))) ((s (k k)) ((s ((s (k s)) ((s (k k)) i))) (k i)))))))) (k (k ((s ((s (k s)) ((s (k k)) i))) ((s ((s (k s)) ((s (k k)) i))) ((s ((s (k s)) ((s (k k)) i))) (k i))))))) ((s ((s ((s (k s)) ((s (k k)) i))) (k ((s i) i)))) ((s ((s (k s)) ((s (k k)) i))) (k ((s i) i))))) ((s ((s (k s)) ((s (k (s (k s)))) ((s ((s (k s)) ((s (k (s (k s)))) ((s (k (s (k k)))) ((s ((s (k s)) ((s (k k)) i))) (k ((s (k (s (k (s i))))) ((s (k (s (k k)))) ((s (k (s i))) ((s (k k)) i)))))))))) (k (k ((s (k k)) i))))))) (k (k (k i))))) (\\x.\\y.\\z.x z (y z)) (\\x.\\y.x) (\\x.x)"
+reduce to:
+"(\\z872.(\\z873.(z872 (z872 (z872 (z872 (z872 (z872 z873))))))))"
+
+-}
 
 ----------------------------------- HW: Unify ----------------------------------
 
@@ -89,9 +156,6 @@ solution:
  ("z","(f a (f y y))")
  ("x","(f (f y y) (f a (f y y)))")]
 
--}
-
-{-
 
 a = b -> y              : f b y
 a = y -> g              : f y g

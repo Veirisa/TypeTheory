@@ -1,13 +1,13 @@
 module Reduction where
 
-import           Lambda
+import           Types.Lambda
 
-import           Data.Char (isDigit)
-import           Data.List (dropWhileEnd)
-import qualified Data.Map  as M (Map, empty, findWithDefault, insert, lookup)
-import qualified Data.Set  as S (Set, delete, empty, fromList, insert,
-                                 intersection, member, null, singleton, toList,
-                                 union)
+import           Data.Char    (isDigit)
+import           Data.List    (dropWhileEnd)
+import qualified Data.Map     as M (Map, empty, findWithDefault, insert, lookup)
+import qualified Data.Set     as S (Set, delete, empty, fromList, insert,
+                                    intersection, member, null, singleton,
+                                    toList, union)
 
 --------------------------------------------------------------------------------
 

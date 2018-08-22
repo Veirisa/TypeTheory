@@ -1,9 +1,9 @@
 module Unify where
 
-import           AlgebraicTerm
+import           Types.AlgebraicTerm
 
-import           Data.List     (maximum, partition, span)
-import qualified Data.Map      as M (Map, fromList, lookup)
+import           Data.List           (maximum, partition, span)
+import qualified Data.Map            as M (Map, fromList, lookup)
 
 --------------------------------------------------------------------------------
 

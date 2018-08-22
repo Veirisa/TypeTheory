@@ -1,6 +1,6 @@
-module HMLambda where
+module Types.HMLambda where
 
-import           Common
+import           Types.Common
 
 import           Text.Megaparsec
 

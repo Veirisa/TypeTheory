@@ -1,16 +1,18 @@
 module Inference where
 
-import           HMLambda
-import           HMType
-import           Lambda
-import           SimpType
+import           Types.HMLambda
+import           Types.HMType
+import           Types.Lambda
+import           Types.SimpType
+
 import           Unify
 
-import           Data.List ((\\))
-import qualified Data.Map  as M (Map, delete, empty, findWithDefault, fromList,
-                                 insert, lookup, map, member, singleton, toList,
-                                 union)
-import qualified Data.Set  as S (Set, delete, empty, singleton, toList, union)
+import           Data.List      ((\\))
+import qualified Data.Map       as M (Map, delete, empty, findWithDefault,
+                                      fromList, insert, lookup, map, member,
+                                      singleton, toList, union)
+import qualified Data.Set       as S (Set, delete, empty, singleton, toList,
+                                      union)
 
 --------------------------------------------------------------------------------
 
