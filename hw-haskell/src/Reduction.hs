@@ -93,16 +93,10 @@ convertToBlockMap block (x : xs) =
   in
     convertToBlockMap newBlock xs
 
-
 getAllNames :: Lambda -> S.Set String
 getAllNames (Var s)     = S.singleton s
 getAllNames (Abs s l)   = S.union (S.singleton s) (getAllNames l)
 getAllNames (App l1 l2) = S.union (getAllNames l1) (getAllNames l2)
-
-getVarNames :: Lambda -> S.Set String
-getVarNames (Var s)     = S.singleton s
-getVarNames (Abs s l)   = getVarNames l
-getVarNames (App l1 l2) = S.union (getVarNames l1) (getVarNames l2)
 
 getAbsNames :: Lambda -> S.Set String
 getAbsNames (Var s)     = S.empty
@@ -111,6 +105,11 @@ getAbsNames (App l1 l2) = S.union (getAbsNames l1) (getAbsNames l2)
 
 getFailAbsNames :: Lambda -> S.Set String
 getFailAbsNames l = S.intersection (getVarNames l) (getAbsNames l)
+  where
+    getVarNames :: Lambda -> S.Set String
+    getVarNames (Var s)     = S.singleton s
+    getVarNames (Abs s l)   = getVarNames l
+    getVarNames (App l1 l2) = S.union (getVarNames l1) (getVarNames l2)
 
 newName :: M.Map String Int -> String -> (String, M.Map String Int)
 newName block s =
@@ -195,13 +194,15 @@ normalBetaReduction l =
 
 --------------------------------------------------------------------------------
 
--- Неэффективное сведение выражения к нормальной форме с использованием
+-- *Неэффективное сведение выражения к нормальной форме с использованием
 -- нормального порядка
 slowReduceToNormalForm :: Lambda -> Lambda
 slowReduceToNormalForm l =
     case reduction (convertToBlockMap M.empty (S.toList (getAllNames l))) l of
         (newL, True) -> slowReduceToNormalForm newL
         _            -> l
+
+--------------------------------------------------------------------------------
 
 type MapStoLB = M.Map String (Lambda, Bool)
 

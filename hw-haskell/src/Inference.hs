@@ -8,7 +8,8 @@ import           Unify
 
 import           Data.List ((\\))
 import qualified Data.Map  as M (Map, delete, empty, findWithDefault, fromList,
-                                 insert, lookup, map, singleton, toList, union)
+                                 insert, lookup, map, member, singleton, toList,
+                                 union)
 import qualified Data.Set  as S (Set, delete, difference, empty, member,
                                  notMember, singleton, toList, union)
 
@@ -61,11 +62,9 @@ inferSimpType lam =
 
 --------------------------------------------------------------------------------
 
--- Генерация новых типов в алгоритме W
 genHMType :: Int -> HMType
 genHMType num = HMElem $ 't' : show num
 
--- Начальный контекст - Мапа из свободных переменных в их типы
 hmLambdaFreeVarsMap :: HMLambda -> M.Map String HMType
 hmLambdaFreeVarsMap = genHMLambdaFreeVarsMap 0
   where
@@ -89,19 +88,18 @@ hmLambdaFreeVarsMap = genHMLambdaFreeVarsMap 0
       in
         M.union m1 m2
 
--- Применение подстановки к типу (передавать мапу!)
 applyTypeSubstitution :: M.Map String HMType -> HMType -> HMType
 applyTypeSubstitution m tCur@(HMElem s) = M.findWithDefault tCur s m
 applyTypeSubstitution m (HMArrow tl tr) =
     HMArrow (applyTypeSubstitution m tl) (applyTypeSubstitution m tr)
-applyTypeSubstitution m (HMForAll _ t) = applyTypeSubstitution m t
+applyTypeSubstitution m (HMForAll s t) =
+    if M.member s m
+    then applyTypeSubstitution m t
+    else HMForAll s (applyTypeSubstitution m t)
 
--- Применение подстановки к нескольким типам (передавать мапу!)
 applyMultiTypesSubstitution :: M.Map String HMType -> M.Map String HMType -> M.Map String HMType
 applyMultiTypesSubstitution subst = M.map (applyTypeSubstitution subst)
 
--- Замена всех зависимых типовых переменных в типе на новые
--- (!!!) Возвращаю пустой мап для удобства в W
 dependTypesSubstitution :: Int -> HMType -> (M.Map String HMType, HMType, Int)
 dependTypesSubstitution num t =
   let
@@ -122,7 +120,6 @@ dependTypesSubstitution num t =
       in
         (M.insert x (genHMType num) newM, newNum)
 
--- Замыкание всех несвязанных типовых переменных в контексте по типу
 closure :: M.Map String HMType -> HMType -> HMType
 closure cont t =
   let
@@ -146,17 +143,14 @@ closure cont t =
     addDependence t []       = t
     addDependence t (x : xs) = HMForAll x (addDependence t xs)
 
--- Композиция подстановок
 compose :: M.Map String HMType -> M.Map String HMType -> M.Map String HMType
 compose next prev = M.union (applyMultiTypesSubstitution next prev) next
 
--- Создание и решение системы в алгоритме W
 typeUnify :: HMType -> HMType -> Maybe (M.Map String HMType)
 typeUnify left right =
     case solveSystem [(algTermOfHMType left, algTermOfHMType right)] of
         Just solut -> Just $ M.fromList (map (fmap hmTypeOfAlgTerm) solut)
         _          -> Nothing
-
 
 -- Вывода типа в системе Хиндли-Милнера
 algorithmW :: HMLambda -> Maybe ([(String, HMType)], HMType)

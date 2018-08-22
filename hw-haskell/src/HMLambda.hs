@@ -10,18 +10,6 @@ data HMLambda = HMVar String
               | HMLet String HMLambda HMLambda
     deriving (Eq, Show)
 
-data OcamlLambda = HM_Var String
-                 | HM_Abs (String, OcamlLambda)
-                 | HM_App (OcamlLambda, OcamlLambda)
-                 | HM_Let (String, OcamlLambda, OcamlLambda)
-    deriving (Eq, Show)
-
-hmOfOcaml :: OcamlLambda -> HMLambda
-hmOfOcaml (HM_Var s)           = HMVar s
-hmOfOcaml (HM_Abs (s, l))      = HMAbs s (hmOfOcaml l)
-hmOfOcaml (HM_App (l1, l2))    = HMApp (hmOfOcaml l1) (hmOfOcaml l2)
-hmOfOcaml (HM_Let (s, l1, l2)) = HMLet s (hmOfOcaml l1) (hmOfOcaml l2)
-
 stringOfHMLambda :: HMLambda -> String
 stringOfHMLambda (HMVar s)     = s
 stringOfHMLambda (HMAbs s l)   = "(\\" ++ s ++ "." ++ stringOfHMLambda l ++ ")"

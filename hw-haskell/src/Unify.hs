@@ -52,7 +52,7 @@ checkSolution lSub lEq =
 
 --------------------------------------------------------------------------------
 
--- Решение системы (Nothing - если его не существует)
+-- Решение системы
 solveSystem :: [(AlgebraicTerm, AlgebraicTerm)] -> Maybe [(String, AlgebraicTerm)]
 solveSystem lEq =
     case solveGlobal $ map (\eq -> (eq, False)) lEq of
