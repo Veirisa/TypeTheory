@@ -151,7 +151,7 @@ typeUnify left right =
         Just solut -> Just $ M.fromList (map (fmap hmTypeOfAlgTerm) solut)
         _          -> Nothing
 
--- Вывода типа в системе Хиндли-Милнера
+-- Вывод типа в системе Хиндли-Милнера
 algorithmW :: HMLambda -> Maybe ([(String, HMType)], HMType)
 algorithmW l =
     case doAlgorithmW 0 (hmLambdaFreeVarsMap l) l of
