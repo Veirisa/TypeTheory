@@ -101,13 +101,13 @@ applyTypeSubstitution m (HMForAll s t) =
 applyMultiTypesSubstitution :: M.Map String HMType -> M.Map String HMType -> M.Map String HMType
 applyMultiTypesSubstitution subst = M.map (applyTypeSubstitution subst)
 
-dependTypesSubstitution :: Int -> HMType -> (M.Map String HMType, HMType, Int)
+dependTypesSubstitution :: Int -> HMType -> (HMType, Int)
 dependTypesSubstitution num t =
   let
     dependVars = hmTypeDependVars t
     (newVarTypesMap, newNum) = genVarTypeMap num dependVars
   in
-    (M.empty, applyTypeSubstitution newVarTypesMap t, newNum)
+    (applyTypeSubstitution newVarTypesMap t, newNum)
   where
     hmTypeDependVars :: HMType -> [String]
     hmTypeDependVars (HMForAll s t) = s : hmTypeDependVars t
@@ -165,7 +165,12 @@ algorithmW l =
     doAlgorithmW num cont (HMVar s) =
         case M.lookup s cont of
             Nothing    -> Nothing
-            Just sType -> Just $ dependTypesSubstitution num sType
+            Just sType ->
+              let
+                newSubst = M.empty
+                (newType, newNum) = dependTypesSubstitution num sType
+              in
+                Just (newSubst, newType, newNum)
     doAlgorithmW num cont (HMApp l1 l2) =
         case doAlgorithmW num cont l1 of
             Nothing -> Nothing
