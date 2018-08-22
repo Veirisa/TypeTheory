@@ -208,11 +208,7 @@ type MapStoLB = M.Map String (Lambda, Bool)
 smartReduction :: M.Map String Int -> MapStoLB -> Bool -> Lambda
                   -> (Lambda, Bool, M.Map String Int, MapStoLB)
 smartReduction block mL _ (App (Abs s1' l1') l2) =
-  let
-    failVars = failsFreeToSubst l2 l1' s1'
-    (newL, newBlock) = renameFailAbs block failVars M.empty l1'
-  in
-    (newL, True, newBlock, M.insert s1' (l2, False) mL)
+    (l1', True, block, M.insert s1' (l2, False) mL)
 smartReduction block mL _ l@(App l1 l2) =
     case smartReduction block mL True l1 of
         (newL1, True, newBlock, newML) -> (App newL1 l2, True, newBlock, newML)
