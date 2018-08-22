@@ -148,7 +148,7 @@ closure cont t =
 
 -- Композиция подстановок
 compose :: M.Map String HMType -> M.Map String HMType -> M.Map String HMType
-compose next prev = applyMultiTypesSubstitution next (M.union prev next)
+compose next prev = M.union (applyMultiTypesSubstitution next prev) next
 
 -- Создание и решение системы в алгоритме W
 typeUnify :: HMType -> HMType -> Maybe (M.Map String HMType)
