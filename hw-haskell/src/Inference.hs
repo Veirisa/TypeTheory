@@ -57,7 +57,7 @@ inferSimpType lam =
       in
         case maybeOldStS of
             Just oldStS -> (syst, newSt, M.insert s oldStS m')
-            _           -> (syst, newSt, m')
+            _           -> (syst, newSt, M.delete s m')
 
 --------------------------------------------------------------------------------
 
