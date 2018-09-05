@@ -255,9 +255,23 @@ let rec smart_reduction block m_l is_left l =
                      let (un_real_l, un_block) = rename_fail_abs block (get_abs_names real_l) M.empty real_l in
                      (un_real_l, true, un_block, m_l)
                  (* эта переменная не является лениво спрятанной лямбдой => return *)
-                 | _ -> (l, false, block, m_l));;
+                 | _ -> (l, false, block, m_l))
 
-let rec do_smart_reduction_to_abs = failwith "nr";;
-let rec do_smart_reduction_to_norm = failwith "nr";;
+and do_smart_reduction_to_abs block m_l is_left l' =
+    let res = smart_reduction block m_l is_left l' in
+    match res with
+        | (Abs (_, _), _, _, _)          -> res
+        | (_, false, _, _)               -> res
+        | (new_l, _, new_block, new_m_l) -> do_smart_reduction_to_abs new_block new_m_l is_left new_l
 
-let reduce_to_normal_form = slow_reduce_to_normal_form;;
+and do_smart_reduction_to_norm block m_l is_left l' =
+    let res = smart_reduction block m_l is_left l' in
+    match res with
+        | (_, false, _, _) -> res
+        | (new_l, _, new_block, new_m_l) -> do_smart_reduction_to_norm new_block new_m_l is_left new_l
+
+let reduce_to_normal_form l =
+    let block = convert_to_block_map M.empty (S.elements (get_all_names l)) in
+    let (unique_l, full_block) = rename_fail_abs block (get_fails_abs_names l) M.empty l in
+    let (norm_l, _, _,  _) = do_smart_reduction_to_norm full_block M.empty false unique_l in
+    norm_l

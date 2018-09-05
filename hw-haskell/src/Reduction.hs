@@ -110,8 +110,8 @@ getFailAbsNames l = S.intersection (getVarNames l) (getAbsNames l)
     getVarNames (Abs _ l)   = getVarNames l
     getVarNames (App l1 l2) = S.union (getVarNames l1) (getVarNames l2)
 
-newName :: M.Map String Int -> String -> (String, M.Map String Int)
-newName block s =
+createNewName :: M.Map String Int -> String -> (String, M.Map String Int)
+createNewName block s =
   let
     prName = dropWhileEnd isDigit s
   in
@@ -131,9 +131,9 @@ renameFailAbs block fails m (Abs s' l') =
         if S.member s' fails
         then
           let
-            (newNname, newBlock) = newName block s'
+            (newName, newBlock) = createNewName block s'
           in
-            (newBlock, M.insert s' newNname m)
+            (newBlock, M.insert s' newName m)
         else (block, m)
     (newL, newBlock2) = renameFailAbs newBlock1 fails newM l'
   in
