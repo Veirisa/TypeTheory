@@ -3,6 +3,7 @@ open Hw1
 module S = Set.Make(String)
 module M = Map.Make(String)
 
+
 let find_with_default d k m =
     match M.find_opt k m with
         | Some el -> el
@@ -80,12 +81,12 @@ let name_partition full_name =
             | c :: cs ->
                 if c >= '0' && c <= '9'
                 then part_with_num_in_rev_list (c :: acc_num) cs
-                else (String.of_seq (List.to_seq (rev name)),
+                else (String.of_seq (List.to_seq (List.rev name)),
                       String.of_seq (List.to_seq acc_num))
             | [] -> ("", String.of_seq (List.to_seq acc_num))
     in
 
-    let rev_name_list = rev (List.of_seq (String.to_seq full_name)) in
+    let rev_name_list = List.rev (List.of_seq (String.to_seq full_name)) in
     part_with_num_in_rev_list [] rev_name_list;;
 
 
@@ -193,14 +194,14 @@ let rec reduction block l =
 
 let normal_beta_reduction l =
     let block = convert_to_block_map M.empty (S.elements (get_all_names l)) in
-    fst (reduction block l)
+    fst (reduction block l);;
 
 (*----------------------------------------------------------------------------*)
 
 let rec slow_reduce_to_normal_form l =
     match reduction (convert_to_block_map M.empty (S.elements (get_all_names l))) l with
         | (new_l, true) -> slow_reduce_to_normal_form new_l
-        | _             -> l
+        | _             -> l;;
 
 (*----------------------------------------------------------------------------*)
 
@@ -257,6 +258,7 @@ let rec smart_reduction block m_l is_left l =
                  (* эта переменная не является лениво спрятанной лямбдой => return *)
                  | _ -> (l, false, block, m_l))
 
+
 and do_smart_reduction_to_abs block m_l is_left l' =
     let res = smart_reduction block m_l is_left l' in
     match res with
@@ -264,14 +266,16 @@ and do_smart_reduction_to_abs block m_l is_left l' =
         | (_, false, _, _)               -> res
         | (new_l, _, new_block, new_m_l) -> do_smart_reduction_to_abs new_block new_m_l is_left new_l
 
+
 and do_smart_reduction_to_norm block m_l is_left l' =
     let res = smart_reduction block m_l is_left l' in
     match res with
         | (_, false, _, _) -> res
         | (new_l, _, new_block, new_m_l) -> do_smart_reduction_to_norm new_block new_m_l is_left new_l
 
+
 let reduce_to_normal_form l =
     let block = convert_to_block_map M.empty (S.elements (get_all_names l)) in
     let (unique_l, full_block) = rename_fail_abs block (get_fails_abs_names l) M.empty l in
     let (norm_l, _, _,  _) = do_smart_reduction_to_norm full_block M.empty false unique_l in
-    norm_l
+    norm_l;;

@@ -1,7 +1,7 @@
 (*----------------------------------------------------------------------------*)
 
 type peano = Z
-           | S of peano;;
+           | S of peano
 
 
 let rec peano_of_int = function
@@ -91,7 +91,7 @@ let merge_sort x = merge_parse (split x [] []);;
 
 type lambda = Var of string
             | Abs of string * lambda
-            | App of lambda * lambda;;
+            | App of lambda * lambda
 
 
 let rec string_of_lambda = function
