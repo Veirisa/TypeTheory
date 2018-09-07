@@ -65,17 +65,6 @@ let system_to_equation l =
     let name = uniqueName l in
     (Fun (name, List.map fst l), Fun (name, List.map snd l));;
 
-(* let print_pair (left, right) = print_string (string_of_alg_term left); print_string "\n";
-                               print_string (string_of_alg_term right); print_string "\n\n";;
-
-let l1 = Fun ("na", [Var "y"; Var "z"]);;
-let l2 = Fun ("t", [l1 ; Var "aaa"]);;
-let ttt = [
-          (Var "x", l1) ;
-          (l2, Var "mr") ] ;;
-
-print_pair (system_to_equation ttt);; *)
-
 (*----------------------------------------------------------------------------*)
 
 let apply_substitution l at =
@@ -153,28 +142,3 @@ let solve_system l_eq =
     match solve_global (List.map (fun eq -> (eq, false)) l_eq) with
         | Some result -> Some (List.map convert result)
         | _           -> None;;
-
-
-(* [("(f b (f a b))", "(f (f y y) z)")]         *)
-
-(* [("x","(f (f y y) z)"),
-    ("x", "(f b (f a b))")] *)
-
-(* let at1r = Fun ("f", [Var "a"; Var "b"]);;
-let at1 = Fun ("f", [Var "b"; at1r]);;
-let at2l = Fun ("f", [Var "y"; Var "y"]);;
-let at2 = Fun ("f", [at2l; Var "z"]);;
-
-
-let rec print_solution = function
-    | x :: xs -> (print_string ("(" ^ fst x ^ ", " ^ string_of_alg_term (snd x) ^ ")\n");
-                  print_solution xs)
-    | [] -> print_string "";;
-
-let check_solve syst =
-    match solve_system syst with
-        | Some l -> print_solution l; print_string "\n";
-        | _ -> print_string "not solution\n\n";;
-
-check_solve [(at1, at2)];;
-check_solve [(Var "x", at2); (Var "x", at1)];; *)

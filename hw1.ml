@@ -56,7 +56,7 @@ let rec power x y =
 let rec do_rev x rev_l =
     match x with
         | [] -> rev_l
-        | h :: t -> do_rev t (h :: rev_l)
+        | h :: t -> do_rev t (h :: rev_l);;
 
 
 let rev x = do_rev x [];;
