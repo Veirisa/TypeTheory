@@ -271,7 +271,7 @@ and do_smart_reduction_to_norm block m_l is_left l' =
     let res = smart_reduction block m_l is_left l' in
     match res with
         | (_, false, _, _) -> res
-        | (new_l, _, new_block, new_m_l) -> do_smart_reduction_to_norm new_block new_m_l is_left new_l
+        | (new_l, _, new_block, new_m_l) -> do_smart_reduction_to_norm new_block new_m_l is_left new_l;;
 
 
 let reduce_to_normal_form l =

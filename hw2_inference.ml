@@ -35,12 +35,6 @@ type simp_type = S_Elem of string
                | S_Arrow of simp_type * simp_type
 
 
-let rec string_of_simp_type = function
-    | S_Elem s         -> s
-    | S_Arrow (tl, tr) ->
-        "(" ^ string_of_simp_type tl ^ " -> " ^ string_of_simp_type tr ^ ")";;
-
-
 let rec alg_term_of_simp_type = function
     | S_Elem s         -> Var s
     | S_Arrow (tl, tr) ->
@@ -110,13 +104,6 @@ type hm_lambda = HM_Var of string
 type hm_type = HM_Elem of string
              | HM_Arrow of hm_type * hm_type
              | HM_ForAll of string * hm_type
-
-
-let rec string_of_hm_type = function
-    | HM_Elem s         -> s
-    | HM_Arrow (tl, tr) ->
-        "(" ^ string_of_hm_type tl ^ " -> " ^ string_of_hm_type tr ^ ")"
-    | HM_ForAll (s, t)  -> "V" ^ s ^ "." ^ string_of_hm_type t;;
 
 
 let rec alg_term_of_hm_type = function

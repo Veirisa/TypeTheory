@@ -31,12 +31,6 @@ let any pr l =
 type algebraic_term = Var of string
                     | Fun of string * (algebraic_term list)
 
-
-let rec string_of_alg_term = function
-    | Var name      -> name
-    | Fun (name, l) ->
-        "(" ^ name ^ " " ^ String.concat " " (List.map string_of_alg_term l) ^ ")";;
-
 (* /\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\ *)
 
 (*----------------------------------------------------------------------------*)

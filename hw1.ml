@@ -53,39 +53,43 @@ let rec power x y =
 
 (*----------------------------------------------------------------------------*)
 
-let rec do_rev x rev_l =
-    match x with
-        | [] -> rev_l
-        | h :: t -> do_rev t (h :: rev_l);;
+let rev l =
+
+    let rec do_rev l rev_l =
+        match l with
+            | [] -> rev_l
+            | h :: t -> do_rev t (h :: rev_l)
+    in
+
+    do_rev l [];;
 
 
-let rev x = do_rev x [];;
+let merge_sort l =
 
+    let rec split l buf1 buf2 =
+        match l with
+            | [] -> (buf1, buf2)
+            | h :: t -> split t (h :: buf2) buf1
+    in
 
-let rec merge x y ans =
-    match (x, y) with
-        | ([], []) -> rev ans
-        | ([], y_h :: y_t) -> merge [] y_t (y_h :: ans)
-        | (x_h :: x_t, []) -> merge x_t [] (x_h :: ans)
-        | (x_h :: x_t, y_h :: y_t) ->
-            if x_h < y_h
-            then merge x_t (y_h :: y_t) (x_h :: ans)
-            else merge (x_h :: x_t) y_t (y_h :: ans);;
+    let rec merge x y ans =
+        match (x, y) with
+            | ([], []) -> rev ans
+            | ([], y_h :: y_t) -> merge [] y_t (y_h :: ans)
+            | (x_h :: x_t, []) -> merge x_t [] (x_h :: ans)
+            | (x_h :: x_t, y_h :: y_t) ->
+                if x_h < y_h
+                then merge x_t (y_h :: y_t) (x_h :: ans)
+                else merge (x_h :: x_t) y_t (y_h :: ans)
+    in
 
+    let rec merge_parse = function
+        | ([], y) -> y
+        | (x, []) -> x
+        | (x, y) -> merge (merge_parse (split x [] [])) (merge_parse (split y [] [])) []
+    in
 
-let rec split l buf1 buf2 =
-    match l with
-        | [] -> (buf1, buf2)
-        | h :: t -> split t (h :: buf2) buf1;;
-
-
-let rec merge_parse = function
-    | ([], y) -> y
-    | (x, []) -> x
-    | (x, y) -> merge (merge_parse (split x [] [])) (merge_parse (split y [] [])) [];;
-
-
-let merge_sort x = merge_parse (split x [] []);;
+    merge_parse (split l [] []);;
 
 (*----------------------------------------------------------------------------*)
 
@@ -103,7 +107,9 @@ let rec string_of_lambda = function
 let lambda_of_string s =
     let s = s ^ ";" in
     let pos = ref 0 in
-    let get() = s.[!pos] in
+
+    let get() = s.[!pos]
+    in
 
     let next() =
         if !pos < String.length s - 1
@@ -118,7 +124,7 @@ let lambda_of_string s =
     in
 
     let rec parse_name name =
-        match (get()) with
+        match get() with
             | '.' | ')' | ' ' | ';' -> name
             | _ ->
                 (let sym = get() in
@@ -130,7 +136,7 @@ let lambda_of_string s =
 
     let rec parse_lambda() =
         let left =
-            match (get()) with
+            match get() with
                 | '\\' -> parse_abs()
                 | '(' ->
                     (eat '(';
@@ -148,11 +154,11 @@ let lambda_of_string s =
         Abs (name, parse_lambda())
 
     and parse_app left =
-        match (get()) with
+        match get() with
             | ';' | ')' -> left
             | _ ->
                 (eat ' ';
-                 match (get()) with
+                 match get() with
                        | '\\' ->
                            (let right = parse_abs() in
                             parse_app (App (left, right)))
