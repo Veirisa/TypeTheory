@@ -132,22 +132,10 @@ let lambda_of_string s =
                  parse_name (name ^ String.make 1 sym))
     in
 
-    let parse_var() = Var (parse_name "") in
+    let parse_var() = Var (parse_name "")
+    in
 
-    let rec parse_lambda() =
-        let left =
-            match get() with
-                | '\\' -> parse_abs()
-                | '(' ->
-                    (eat '(';
-                     let res = parse_lambda() in
-                     eat ')';
-                     res)
-                | _ -> parse_var()
-        in
-        parse_app left
-
-    and parse_abs() =
+    let rec parse_abs() =
         eat '\\';
         let name = parse_name "" in
         eat '.';
@@ -170,6 +158,19 @@ let lambda_of_string s =
                        | _ ->
                            (let right = parse_var() in
                             parse_app (App (left, right))))
+
+    and parse_lambda() =
+        let left =
+            match get() with
+                | '\\' -> parse_abs()
+                | '(' ->
+                    (eat '(';
+                     let res = parse_lambda() in
+                     eat ')';
+                     res)
+                | _ -> parse_var()
+        in
+        parse_app left
     in
 
     parse_lambda();;

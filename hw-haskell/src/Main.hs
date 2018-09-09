@@ -13,8 +13,6 @@ import           Unify
 import qualified Data.Map            as M
 import qualified Data.Set            as S
 
---------------------------------------------------------------------------------
-
 main :: IO ()
 main = putStrLn "TypeTheory"
 
