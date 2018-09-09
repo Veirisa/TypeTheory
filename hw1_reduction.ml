@@ -124,7 +124,7 @@ let get_fails_abs_names l =
         | App (l1, l2) -> S.union (get_var_names l1) (get_var_names l2)
     in
 
-    S.inter (get_var_names l) (get_var_names l);;
+    S.inter (get_var_names l) (get_abs_names l);;
 
 
 let create_new_name block s =
@@ -270,7 +270,7 @@ and do_smart_reduction_to_abs block m_l is_left l' =
 and do_smart_reduction_to_norm block m_l is_left l' =
     let res = smart_reduction block m_l is_left l' in
     match res with
-        | (_, false, _, _) -> res
+        | (_, false, _, _)               -> res
         | (new_l, _, new_block, new_m_l) -> do_smart_reduction_to_norm new_block new_m_l is_left new_l;;
 
 

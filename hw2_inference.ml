@@ -5,7 +5,7 @@ module S = Set.Make(String)
 module M = Map.Make(String)
 
 
-let left_pr = fun k l _ -> Some l;;
+let left_pr = fun _ l _ -> Some l;;
 
 
 let pair_map f (l, r) = (l, f r);;
@@ -46,8 +46,8 @@ let rec simp_type_of_alg_term = function
     | Fun (n, [tl; tr]) ->
         if n = "a"
         then S_Arrow (simp_type_of_alg_term tl, simp_type_of_alg_term tr)
-        else failwith "incorrect algebraic term (func name)"
-    | _                 -> failwith "incorrect algebraic term (func args)";;
+        else failwith "incorrect algebraic term (fun name)"
+    | _                 -> failwith "incorrect algebraic term (fun args)";;
 
 (* /\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\ *)
 
@@ -118,8 +118,8 @@ let rec hm_type_of_alg_term = function
     | Fun (n, [tl; tr]) ->
         if n = "a"
         then HM_Arrow (hm_type_of_alg_term tl, hm_type_of_alg_term tr)
-        else failwith "incorrect algebraic term (func name)"
-    | _                 -> failwith "incorrect algebraic term (func args)";;
+        else failwith "incorrect algebraic term (fun name)"
+    | _                 -> failwith "incorrect algebraic term (fun args)";;
 
 (* /\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\ *)
 

@@ -25,5 +25,5 @@ hmTypeOfAlgTerm (Var s) = HMElem s
 hmTypeOfAlgTerm (Fun n (tl : tr : [])) =
     if n == "a"
     then HMArrow (hmTypeOfAlgTerm tl) (hmTypeOfAlgTerm tr)
-    else error "incorrect algebraic term"
-hmTypeOfAlgTerm _ = error "incorrect algebraic term"
+    else error "incorrect algebraic term (fun name)"
+hmTypeOfAlgTerm _ = error "incorrect algebraic term (fun args)"

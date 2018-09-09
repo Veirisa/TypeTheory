@@ -52,11 +52,11 @@ let system_to_equation l =
         max (get_max_length left) (get_max_length right)
     in
 
-    let uniqueName l' =
+    let unique_name l' =
         String.make (maximum 0 (List.map get_pair_max_length l') + 1) 'f'
     in
 
-    let name = uniqueName l in
+    let name = unique_name l in
     (Fun (name, List.map fst l), Fun (name, List.map snd l));;
 
 (*----------------------------------------------------------------------------*)
@@ -86,7 +86,7 @@ let solve_system l_eq =
 
     let convert = function
         | ((Var x, right), true)  -> (x, right)
-        | _                       -> failwith "incorrect situation"
+        | _                       -> failwith "incorrect equation in solution"
     in
 
     let rec contains_var x at =
@@ -95,8 +95,16 @@ let solve_system l_eq =
             | Fun (_, l) -> any (contains_var x) l
     in
 
-    let substitution l_sub ((at1, at2), _) =
-        ((apply_substitution l_sub at1, apply_substitution l_sub at2), false)
+    let try_substitution x new_at at =
+        if contains_var x at
+        then apply_substitution [(x, new_at)] at
+        else at
+    in
+
+    let substitution x new_at ((at1, at2), flag) =
+        let left = try_substitution x new_at at1 in
+        let right = try_substitution x new_at at2 in
+        ((left, right), flag)
     in
 
     let rec create_eqs l l1 l2 =
@@ -112,15 +120,9 @@ let solve_system l_eq =
             then None
             else solve_global (create_eqs [] l1 l2 @ eqs)
         | ((Var x, at), _) :: eqs  ->
-            let part_func = fun ((at1, at2), _) -> contains_var x at1 || contains_var x at2 in
-            let (have, not_have) = List.partition part_func eqs in
-            let (have_false, have_true) = List.partition (fun (_, b) -> not b) have in
-            let (not_have_false, not_have_true) = List.partition (fun (_, b) -> not b) not_have in
             if contains_var x at
             then None
-            else solve_global (List.map (substitution [(x, at)]) have_false @ not_have_false @
-                               List.map (substitution [(x, at)]) have_true @ not_have_true @
-                               [((Var x, at), true)])
+            else solve_global (List.map (substitution x at) eqs @ [((Var x, at), true)])
         | _ -> Some []
 
     and solve_global l_eq =

@@ -21,5 +21,5 @@ simpTypeOfAlgTerm (Var s) = SElem s
 simpTypeOfAlgTerm (Fun n (tl : tr : [])) =
     if n == "a"
     then SArrow (simpTypeOfAlgTerm tl) (simpTypeOfAlgTerm tr)
-    else error "incorrect algebraic term"
-simpTypeOfAlgTerm _ = error "incorrect algebraic term"
+    else error "incorrect algebraic term (fun name)"
+simpTypeOfAlgTerm _ = error "incorrect algebraic term (fun args)"
