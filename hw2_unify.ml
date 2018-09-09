@@ -105,16 +105,7 @@ let solve_system l_eq =
             | _                  -> List.rev l
     in
 
-    let rec solve_global l_eq =
-        match l_eq with
-            | (_, true) :: _         -> Some l_eq
-            | ((at1, at2), _) :: eqs ->
-                if at1 = at2
-                then solve_global eqs
-                else solve l_eq
-            | _                      -> Some []
-
-    and solve = function
+    let rec solve = function
         | ((Fun (n, l), Var x), _) :: eqs -> solve (((Var x, Fun (n, l)), false) :: eqs)
         | ((Fun (n1, l1), Fun (n2, l2)), _) :: eqs ->
             if (n1 <> n2) || (List.length l1 <> List.length l2)
@@ -131,6 +122,15 @@ let solve_system l_eq =
                                List.map (substitution [(x, at)]) have_true @ not_have_true @
                                [((Var x, at), true)])
         | _ -> Some []
+
+    and solve_global l_eq =
+        match l_eq with
+            | (_, true) :: _         -> Some l_eq
+            | ((at1, at2), _) :: eqs ->
+                if at1 = at2
+                then solve_global eqs
+                else solve l_eq
+            | _                      -> Some []
     in
 
     match solve_global (List.map (fun eq -> (eq, false)) l_eq) with
